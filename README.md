@@ -1,2 +1,2 @@
 # UNICoup
-Very usefull app
+Very usefull app for each student.
