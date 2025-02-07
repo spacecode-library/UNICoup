@@ -9,7 +9,7 @@ export enum UserRole {
 
 // Base User Interface
 export interface IUser extends Document {
-  id: mongoose.Types.ObjectId;
+  _id: string;
   name: string;
   email: string;
   password: string;
@@ -22,7 +22,7 @@ export interface IUser extends Document {
 // Base User Schema
 const UserSchema: Schema = new Schema(
   {
-    id: { type: new mongoose.Types.ObjectId().toString() },
+    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString()  },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true, minlength: 6 },

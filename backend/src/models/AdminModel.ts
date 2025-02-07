@@ -1,9 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-
 // Base Admin Interface
 export interface IADMIN extends Document {
-  id: mongoose.Types.ObjectId;
+  _id: string;
   userid: string;
   Adminphone: string;
   AdminProfilePic: string;
@@ -14,7 +13,7 @@ export interface IADMIN extends Document {
 // Base Admin Schema
 const AdminSchema: Schema = new Schema(
   {
-    id: { type: new mongoose.Types.ObjectId().toString() },
+    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString()  },
     userid: { type: String, required: true, trim: true },
     Adminphone: { type: String, required: true, trim: true },
     AdminProfilePic: { type: String, required: true },

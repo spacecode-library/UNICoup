@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 // Base User Interface
 export interface ISTUDENT extends Document {
-  id: mongoose.Types.ObjectId;
+  _id: string;
   userid: string;
   university: string;
   major: string;
@@ -17,7 +17,7 @@ export interface ISTUDENT extends Document {
 // Base Student Schema
 const StudentSchema: Schema = new Schema(
   {
-    id: { type: new mongoose.Types.ObjectId().toString() },
+    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString()},
     userid: { type: String, required: true, trim: true },
     university: { type: String, required: true, trim: true },
     major: { type: String, required: true, trim: true },

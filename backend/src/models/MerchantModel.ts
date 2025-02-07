@@ -1,9 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-
 // Base User Interface
 export interface IMERCHANT extends Document {
-  id: mongoose.Types.ObjectId;
+  _id: string;
   userid: string;
   businessname: string;
   businessaddress: string;
@@ -19,7 +18,7 @@ export interface IMERCHANT extends Document {
 // Base Merchant Schema
 const MerchantSchema: Schema = new Schema(
   {
-    id: { type: new mongoose.Types.ObjectId().toString() },
+    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString()},
     userid: { type: String, required: true, trim: true },
     businessname: { type: String, required: true, trim: true },
     businessaddress: { type: String, required: true, trim: true },
