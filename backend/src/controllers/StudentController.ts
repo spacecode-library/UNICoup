@@ -19,8 +19,82 @@ interface AuthenticatedRequest extends Request {
 }
 
 class StudentController {
+
+    static async studentLogin(req: Request, res: Response): Promise<any> {
+        try {
+            let { email, password, role } = req.body;
+
+            const getStudentData = await UserModel.findOne(
+                { email: email, isdeleted: false },
+                { password: 1, role: 1 }
+            )
+
+            if(getStudentData === null || getStudentData.role !== role ){
+                return res.status(400).json({ success: false, message: ["Invalid Email or Password"] ,data:{}});
+            }
+
+            const isMatch = await bcrypt.compare(password, getStudentData.password);
+
+            if (!isMatch) {
+                return res.status(400).json({ success: false, message: ["Invalid Email or Password"] ,data:{}});
+            }
+
+            const authTokenId = new mongoose.Types.ObjectId().toString();
+
+            const payload = {
+                authId: authTokenId,
+                identityId: getStudentData.id,
+                role: getStudentData.role
+            }
+
+            let newDate = new Date();
+
+            const tokenExpiredAt = 60 * 60;
+            const accessToken = await generateAccessToken(payload, tokenExpiredAt);
+
+            const refreshTokenExpiredAt = 60 * 60 * 24 * 20;
+            const refreshToken = await generateRefreshToken(payload, refreshTokenExpiredAt);
+
+            const tokenData = new AuthModel();
+            tokenData._id = authTokenId;
+            tokenData.identityid = getStudentData.id;
+            tokenData.token = accessToken;
+            tokenData.tokenExpiredAt = Math.floor(Date.now() / 1000) + (60 * 60);
+            tokenData.refreshToken = refreshToken;
+            tokenData.refreshTokenExpiredAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 20);
+
+            await new AuthModel(tokenData).save();
+
+            return res.status(200).json({
+                message: ['Student Login Successfully.'],
+                succeeded: true,
+                data: {
+                    identityId: getStudentData.id,
+                    token: accessToken,
+                    tokenExpiredAt: newDate.setSeconds(tokenExpiredAt),
+                    refreshToken: refreshToken,
+                    refreshTokenExpiredAt: newDate.setSeconds(refreshTokenExpiredAt),
+                }
+            });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
+        }
+    }
+
+    static async middlewareCheck(req:Request,res:Response):Promise<any>{
+        try {
+            return res.status(200).json({ success: true, message: ["Inside middleware check student"] });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
+            
+        }
+    }
+
     // Middleware to authenticate user
-    static async authenticateUser(req: AuthenticatedRequest, res: Response, next: any): Promise<Response> {
+    static async authenticateUser(req: AuthenticatedRequest, res: Response, next: any): Promise<any> {
         try {
             const token = req.headers.authorization?.split(' ')[1];
             if (!token) {
@@ -47,7 +121,7 @@ class StudentController {
     }
 
     // Initiate email verification process for onboarding
-    static async initiateVerification(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    static async initiateVerification(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { email } = req.body;
 
@@ -107,7 +181,7 @@ class StudentController {
     }
 
     // Verify OTP provided by the student for onboarding
-    static async verifyOTP(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    static async verifyOTP(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { requestId, otp } = req.body;
 
@@ -163,7 +237,7 @@ class StudentController {
     }
 
     // Resend OTP for onboarding
-    static async resendOtp(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    static async resendOtp(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { requestId } = req.body;
 
@@ -228,7 +302,7 @@ class StudentController {
     }
 
     // Upload Student ID and validate it
-    static async uploadStudentID(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    static async uploadStudentID(req: AuthenticatedRequest, res: Response): Promise<any> {
         const { name, university, major, StartYear, GraduationYear, StudentID } = req.body;
         const file = req.file;
 
@@ -277,7 +351,8 @@ class StudentController {
             student.GraduationYear = GraduationYear;
             student.StudentID = StudentID;
             student.StudentCardDocument = file.path; // Cloudinary URL
-            student.status = 'verified'; // Set status to verified after document upload
+            student.status = 'pending'; // Set status to verified after document upload
+            student.StudentIDSubmitted = true;
             await student.save();
 
             res.status(200).json({ message: 'Student ID uploaded successfully.' });

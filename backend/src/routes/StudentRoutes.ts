@@ -4,10 +4,14 @@ import { StudentMW } from "../middleware/StudentMW.js";
 
 const router = Router();
 
-//public routes
-router.post("/login",StudentController.studentLogin);
+// Public Routes
+router.post("/student/login", StudentController.studentLogin); // Login route for students
+router.post("/student/initiate-verification", StudentController.initiateVerification); // Initiate email verification
+router.post("/student/verify-otp", StudentController.verifyOTP); // Verify OTP sent to email
+router.post("/student/resend-otp", StudentController.resendOtp); // Resend OTP if needed
 
-//protected routes
-router.get("/check",StudentMW,StudentController.middlewareCheck);
+// Protected Routes (Require Authentication Middleware)
+router.get("/student/check", StudentMW, StudentController.middlewareCheck); // Check if student is authenticated
+router.post("/student/upload-id", StudentMW, StudentController.uploadStudentID); // Upload Student ID after verification
 
 export default router;

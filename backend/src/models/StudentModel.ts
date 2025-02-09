@@ -17,6 +17,7 @@ export interface ISTUDENT extends Document {
   StudentCardDocument: string;
   isdeleted: boolean;
   status: string;
+  StudentIDSubmitted: boolean;
   isVerified: boolean; 
 }
 
@@ -37,6 +38,7 @@ const StudentSchema: Schema = new Schema(
       StudentCardDocument: { type: String, required: false },
       isdeleted: { type: Boolean, default: false },
       status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
+      StudentIDSubmitted: { type: Boolean, default: false },
       isVerified: { type: Boolean, default: false }, // Add this field
   },
   { timestamps: true, discriminatorKey: 'role' }
