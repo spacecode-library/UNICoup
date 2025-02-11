@@ -61,10 +61,10 @@ class UserController {
             const OTP = Array.from({ length: 4 }, () => crypto.randomInt(0, 10)).join('');
 
             // Send OTP to user
-            const otpSend = await sendEmailVerificationOTP(email, OTP);
-            if (!otpSend) {
-                return res.status(500).json({ success: false, message: ["Unable to send OTP, please try again later"], data: {} });
-            }
+            // const otpSend = await sendEmailVerificationOTP(email, OTP);
+            // if (!otpSend) {
+            //     return res.status(500).json({ success: false, message: ["Unable to send OTP, please try again later"], data: {} });
+            // }
 
             const otpData = new OtpModel();
             otpData.otp = OTP;

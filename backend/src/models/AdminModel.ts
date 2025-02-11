@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { AdminRoleEnums } from "../constants/EnumTypes.js";
 
 // Base Admin Interface
 export interface IADMIN extends Document {
@@ -7,6 +8,7 @@ export interface IADMIN extends Document {
   Adminphone: string;
   AdminProfilePic: string;
   master: boolean;
+  AdminRole : AdminRoleEnums;
   isdeleted: boolean;
 }
 
@@ -18,6 +20,7 @@ const AdminSchema: Schema = new Schema(
     Adminphone: { type: String, required: true, trim: true },
     AdminProfilePic: { type: String, required: true },
     master: { type: Boolean, default: false },
+    AdminRole:{ type: String, enum: Object.values(AdminRoleEnums), required: true , default: AdminRoleEnums.Default },
     isdeleted: { type: Boolean, default: false }
   },
 

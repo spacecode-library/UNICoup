@@ -11,11 +11,12 @@ import { generateAccessToken, generateRefreshToken, validateAccessToken } from '
 import AuthModel from '../models/Authmodel.js';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
+import { StudentStatusEnums } from '../constants/EnumTypes.js';
 
 // Extend the Request type to include the `file` property and user data
 interface AuthenticatedRequest extends Request {
     file?: Express.Multer.File;
-    user?: { identityId: string; role: string };
+    identityId:string;
 }
 
 class StudentController {
@@ -83,54 +84,40 @@ class StudentController {
         }
     }
 
-    static async middlewareCheck(req:Request,res:Response):Promise<any>{
-        try {
-            return res.status(200).json({ success: true, message: ["Inside middleware check student"] });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
-            
-        }
-    }
-
     // Middleware to authenticate user
-    static async authenticateUser(req: AuthenticatedRequest, res: Response, next: any): Promise<any> {
-        try {
-            const token = req.headers.authorization?.split(' ')[1];
-            if (!token) {
-                return res.status(401).json({ success: false, message: ['Authorization token missing'] });
-            }
+    // static async authenticateUser(req: AuthenticatedRequest, res: Response, next: any): Promise<any> {
+    //     try {
+    //         const token = req.headers.authorization?.split(' ')[1];
+    //         if (!token) {
+    //             return res.status(401).json({ success: false, message: ['Authorization token missing'] });
+    //         }
 
-            // Validate access token
-            const decoded = await validateAccessToken(token);
-            if (!decoded || !decoded.identityId) {
-                return res.status(401).json({ success: false, message: ['Invalid token'] });
-            }
+    //         // Validate access token
+    //         const decoded = await validateAccessToken(token);
+    //         if (!decoded || !decoded.identityId) {
+    //             return res.status(401).json({ success: false, message: ['Invalid token'] });
+    //         }
 
-            // Attach user data to request
-            req.user = {
-                identityId: decoded.identityId,
-                role: decoded.role,
-            };
+    //         // Attach user data to request
+    //         req.user = {
+    //             identityId: decoded.identityId,
+    //             role: decoded.role,
+    //         };
 
-            next();
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ success: false, message: ['Authentication failed'] });
-        }
-    }
+    //         next();
+    //     } catch (error) {
+    //         console.error(error);
+    //         return res.status(500).json({ success: false, message: ['Authentication failed'] });
+    //     }
+    // }
 
     // Initiate email verification process for onboarding
     static async initiateVerification(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { email } = req.body;
 
-            if (!req.user) {
-                return res.status(401).json({ message: 'Unauthorized' });
-            }
-
             if (!email) {
-                return res.status(400).json({ message: 'Email is required' });
+                return res.status(400).json({success:false , message: ['Email is required'] });
             }
 
             console.log("Received email:", email);
@@ -138,13 +125,13 @@ class StudentController {
             // Verify university domain
             const isUniversityEmail = await verifyUniversityDomain(email);
             if (!isUniversityEmail) {
-                return res.status(400).json({ message: 'Invalid university email' });
+                return res.status(400).json({ success:true ,message: ['Invalid university email'] });
             }
 
             // Check if an OTP already exists for this email
             const existingOtp = await OtpModel.findOne({ email, isdeleted: false, verified: 0 });
             if (existingOtp) {
-                return res.status(400).json({ message: 'An OTP is already sent to this email. Please check your inbox.' });
+                return res.status(400).json({ success:true , message: ['An OTP is already sent to this email. Please check your inbox.'] });
             }
 
             // Generate a secure 4-digit OTP
@@ -173,10 +160,10 @@ class StudentController {
 
             await otpData.save();
 
-            res.status(200).json({ message: 'Verification email sent successfully', data: { requestId: otpData._id } });
+            res.status(200).json({ success:true , message: ['Verification otp sent successfully'], data: { requestId: otpData._id } });
         } catch (error) {
             console.error('Error initiating verification:', error);
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(500).json({ message: 'Unable to send Verification otp , Please try again later' });
         }
     }
 
@@ -184,13 +171,9 @@ class StudentController {
     static async verifyOTP(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { requestId, otp } = req.body;
-
-            if (!req.user) {
-                return res.status(401).json({ message: 'Unauthorized' });
-            }
-
+            const identityId = req.identityId;
             if (!requestId || !otp) {
-                return res.status(400).json({ message: 'Request ID and OTP are required' });
+                return res.status(400).json({ success:false , message: ['Request ID and OTP are required'] });
             }
 
             // Find the OTP record by requestId
@@ -200,7 +183,7 @@ class StudentController {
             );
 
             if (!getOtpData) {
-                return res.status(404).json({ message: 'Invalid request ID' });
+                return res.status(404).json({success:true , message: ['Invalid request ID'] });
             }
 
             const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -209,7 +192,7 @@ class StudentController {
 
             // Check if OTP has expired
             if (currentTimestamp > otpExpired) {
-                return res.status(400).json({ message: 'OTP has expired' });
+                return res.status(400).json({ success:true , message: 'OTP has expired' });
             }
 
             // Check if OTP is valid
@@ -225,14 +208,14 @@ class StudentController {
             // Update the student's verification status in the StudentModel
             const student = await StudentModel.findOneAndUpdate(
                 { email: getOtpData.email },
-                { $set: { isVerified: true, status: 'verified' } },
+                { $set: { userid: identityId, isVerified: true} },
                 { upsert: true, new: true }
             );
 
-            res.status(200).json({ message: 'OTP verified successfully' });
+            res.status(200).json({ success:true , message: ['OTP verified successfully'] });
         } catch (error) {
             console.error('Error verifying OTP:', error);
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(500).json({success:false, message: ['Unable to verify Otp,Please try again later'] });
         }
     }
 
@@ -240,10 +223,6 @@ class StudentController {
     static async resendOtp(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { requestId } = req.body;
-
-            if (!req.user) {
-                return res.status(401).json({ message: 'Unauthorized' });
-            }
 
             if (!requestId) {
                 return res.status(400).json({ message: 'Request ID is required' });
@@ -264,7 +243,7 @@ class StudentController {
 
             // Check if resend limit is exceeded
             if (resendCount >= resendLimit) {
-                return res.status(403).json({ message: 'Resend limit exceeded' });
+                return res.status(403).json({ success:false , message: ['Resend limit exceeded'] });
             }
 
             // Generate a new OTP
@@ -274,7 +253,7 @@ class StudentController {
             // Send the new OTP to the user's email
             const otpSend = await sendEmailVerificationOTP(getOtpData.email, OTP);
             if (!otpSend) {
-                return res.status(500).json({ message: 'Unable to resend OTP, please try again later' });
+                return res.status(500).json({ success:false , message: ['Unable to resend OTP, please try again later'] });
             }
 
             // Update the OTP record
@@ -288,7 +267,7 @@ class StudentController {
             }, { new: true });
 
             res.status(200).json({
-                message: 'New OTP sent successfully',
+                message:[ 'New OTP sent successfully'],
                 data: {
                     requestId: getOtpData._id,
                     expiredAt: currentTimestamp + 300,
@@ -297,7 +276,7 @@ class StudentController {
             });
         } catch (error) {
             console.error('Error resending OTP:', error);
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(500).json({ success:false , message: ['Unable to send otp , please try again later'] });
         }
     }
 
@@ -306,17 +285,14 @@ class StudentController {
         const { name, university, major, StartYear, GraduationYear, StudentID } = req.body;
         const file = req.file;
 
-        if (!req.user) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-
         if (!file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
         try {
             // Find the student by userId
-            const student = await StudentModel.findOne({ _id: req.user.identityId });
+            const student = await StudentModel.findOne({ userid: req.identityId , isdeleted:false });
+            const getStudentData = await UserModel.findOne({_id:req.identityId,isdeleted:false});
 
             if (!student) {
                 return res.status(404).json({ message: 'Student not found' });
@@ -336,29 +312,29 @@ class StudentController {
             const extractedText = ocrResult.info.ocr.adv_ocr.data[0].textAnnotations
                 .map((annotation: { description: string }) => annotation.description)
                 .join(' ');
-
+            
             // Step 2: Validate the document
-            const isDocumentValid = await validateStudentID(file.filename, extractedText, name);
+            const isDocumentValid = await validateStudentID(file.filename, extractedText, getStudentData.name);
             if (!isDocumentValid) {
                 return res.status(400).json({ message: 'Invalid Student ID document' });
             }
 
             // Step 3: Save the document URL and update student details
-            student.name = name;
+            // student.name = name;
             student.university = university;
             student.major = major;
             student.StartYear = StartYear;
             student.GraduationYear = GraduationYear;
             student.StudentID = StudentID;
             student.StudentCardDocument = file.path; // Cloudinary URL
-            student.status = 'pending'; // Set status to verified after document upload
+            student.status = StudentStatusEnums.Pending; // Set status to verified after document upload
             student.StudentIDSubmitted = true;
             await student.save();
 
-            res.status(200).json({ message: 'Student ID uploaded successfully.' });
+            res.status(200).json({success:true,  message: ['Student ID uploaded successfully.'] });
         } catch (error) {
             console.error('Error uploading Student ID:', error);
-            res.status(500).json({ message: 'Failed to upload Student ID' });
+            res.status(500).json({ success:false , message: ['Failed to upload Student ID'] });
         }
     }
 }
@@ -366,6 +342,7 @@ class StudentController {
 // Helper function to validate the Student ID document
 const validateStudentID = async (filePath: string, extractedText: string, studentName: string): Promise<boolean> => {
     // Check if the document contains the student's name
+    console.log(extractedText)
     const isNameValid = extractedText.toLowerCase().includes(studentName.toLowerCase());
     if (!isNameValid) {
         return false;

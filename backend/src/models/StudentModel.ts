@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { StudentStatusEnums } from "../constants/EnumTypes.js";
 
 
 // Base User Interface
@@ -25,7 +26,7 @@ export interface ISTUDENT extends Document {
 const StudentSchema: Schema = new Schema(
   {
       _id: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
-      name: { type: String, required: false, trim: true },
+      // name: { type: String, required: false, trim: true },
       userid: { type: String, required: true, trim: true },
       email: { type: String, required: true, trim: true },
       otp: { type: String, required: false },
@@ -37,7 +38,7 @@ const StudentSchema: Schema = new Schema(
       StudentID: { type: String, required: true },
       StudentCardDocument: { type: String, required: false },
       isdeleted: { type: Boolean, default: false },
-      status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
+      status: { type: String, enum: Object.values(StudentStatusEnums), default: StudentStatusEnums.Pending },
       StudentIDSubmitted: { type: Boolean, default: false },
       isVerified: { type: Boolean, default: false }, // Add this field
   },

@@ -5,13 +5,14 @@ import bcrypt from 'bcrypt';
 import { generateAccessToken, generateRefreshToken, validateAccessToken } from '../utils/Jwt.js';
 import AuthModel from '../models/Authmodel.js';
 import mongoose from 'mongoose';
+import AdminModel from '../models/AdminModel.js';
+import { AdminRoleEnums, StudentStatusEnums, UserRoleEnums } from '../constants/EnumTypes.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
-    user?: {
-        identityId: string;
-        role: string;
-    };
+    identityId: string;
+    role: string;
+    adminRole: string;
 }
 
 class AdminController {
@@ -22,8 +23,13 @@ class AdminController {
 
             const getAdminData = await UserModel.findOne(
                 { email: email, isdeleted: false },
-                { password: 1, role: 1 }
+                { _id: 1, password: 1, role: 1 }
             );
+
+            const getAdminRoleData = await AdminModel.findOne(
+                { _id: getAdminData._id, isdeleted: false },
+                { AdminRole: 1 }
+            )
 
             if (getAdminData === null || getAdminData.role !== role) {
                 return res.status(400).json({ success: false, message: ['Invalid Email or Password'], data: {} });
@@ -37,9 +43,12 @@ class AdminController {
             const authTokenId = new mongoose.Types.ObjectId().toString();
             const payload = {
                 authId: authTokenId,
-                identityId: getAdminData.id,
+                identityId: getAdminData._id,
                 role: getAdminData.role,
+                adminRole: getAdminRoleData ? getAdminRoleData.AdminRole : AdminRoleEnums.Default
             };
+
+            let newDate = new Date();
 
             const tokenExpiredAt = 60 * 60; // 1 hour
             const accessToken = await generateAccessToken(payload, tokenExpiredAt);
@@ -63,9 +72,9 @@ class AdminController {
                 data: {
                     identityId: getAdminData.id,
                     token: accessToken,
-                    tokenExpiredAt: new Date(Date.now() + tokenExpiredAt * 1000),
+                    tokenExpiredAt: newDate.setSeconds(tokenExpiredAt),
                     refreshToken: refreshToken,
-                    refreshTokenExpiredAt: new Date(Date.now() + refreshTokenExpiredAt * 1000),
+                    refreshTokenExpiredAt: newDate.setSeconds(refreshTokenExpiredAt),
                 },
             });
         } catch (error) {
@@ -74,50 +83,97 @@ class AdminController {
         }
     }
 
-    // Middleware to authenticate admin
-    static async authenticateAdmin(req: AuthenticatedRequest, res: Response, next: any): Promise<Response> {
+    // create admin profile
+    static async adminProfile(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
-            const token = req.headers.authorization?.split(' ')[1];
-            if (!token) {
-                return res.status(401).json({ success: false, message: ['Authorization token missing'] });
+            const userId = req.identityId;
+            let { adminPhone, adminProfilePic } = req.body;
+
+            const getAdminData = await AdminModel.findOne(
+                { userid: userId, isdeleted: false },
+                { _id: 1 }
+            )
+            if (!getAdminData) {
+                const newAdminProfile = new AdminModel({
+                    userid: userId,
+                    Adminphone: adminPhone,
+                    AdminProfilePic: adminProfilePic,
+                });
+                await newAdminProfile.save();
+
+                res.status(201).json({
+                    success: true,
+                    message: ["Admin profile submitted successfully"],
+                    data: newAdminProfile._id
+                });
+            } else {
+                const updatedAdminProfile = await AdminModel.findOneAndUpdate(
+                    { userid: userId, isdeleted: false },
+                    { adminPhone, adminProfilePic, updatedAt: new Date() },
+                    { new: true }
+                );
+
+                res.status(200).json({
+                    success: true,
+                    message: ["Admin profile submitted successfully"],
+                    data: updatedAdminProfile._id
+                });
             }
-
-            // Validate token
-            const decoded = await validateAccessToken(token);
-            if (!decoded || !decoded.identityId) {
-                return res.status(401).json({ success: false, message: ['Invalid token'] });
-            }
-
-            // Attach admin data to request
-            req.user = {
-                identityId: decoded.identityId,
-                role: decoded.role,
-            };
-
-            next();
         } catch (error) {
             console.error(error);
-            res.status(500).json({ success: false, message: ['Authentication failed'] });
+            res.status(500).json({ success: false, message: ['Unable to submit admin profile, please try again later'] });
         }
     }
+
+    // Middleware to authenticate admin
+    // static async authenticateAdmin(req: AuthenticatedRequest, res: Response, next: any): Promise<Response> {
+    //     try {
+    //         const token = req.headers.authorization?.split(' ')[1];
+    //         if (!token) {
+    //             return res.status(401).json({ success: false, message: ['Authorization token missing'] });
+    //         }
+
+    //         // Validate token
+    //         const decoded = await validateAccessToken(token);
+    //         if (!decoded || !decoded.identityId) {
+    //             return res.status(401).json({ success: false, message: ['Invalid token'] });
+    //         }
+
+    //         // Attach admin data to request
+    //         req.user = {
+    //             identityId: decoded.identityId,
+    //             role: decoded.role,
+    //         };
+
+    //         next();
+    //     } catch (error) {
+    //         console.error(error);
+    //         res.status(500).json({ success: false, message: ['Authentication failed'] });
+    //     }
+    // }
 
     // Fetch pending students awaiting approval
     static async getPendingStudents(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: ['Unauthorized'] });
-            }
 
             // Ensure only authorized roles can access this endpoint
-            if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
-                return res.status(403).json({ success: false, message: ['Permission denied'] });
-            }
+            // if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
+            //     return res.status(403).json({ success: false, message: ['Permission denied'] });
+            // }
 
             // Fetch students with status "pending" and StudentIDSubmitted: true
             const pendingStudents = await StudentModel.find(
-                { status: 'pending', isdeleted: false, StudentIDSubmitted: true },
+                { status: StudentStatusEnums.Pending, isdeleted: false, StudentIDSubmitted: true },
                 { name: 1, university: 1, major: 1, StartYear: 1, GraduationYear: 1, StudentID: 1, StudentCardDocument: 1, status: 1 }
             );
+            console.log(pendingStudents)
+            if (pendingStudents.length === 0) {
+                return res.status(404).json({
+                    success: true,
+                    message: ['No Data Found.'],
+                    data: {}
+                })
+            }
 
             return res.status(200).json({
                 success: true,
@@ -135,19 +191,15 @@ class AdminController {
         try {
             const { studentId } = req.body;
 
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: ['Unauthorized'] });
-            }
-
-            // Ensure only authorized roles can approve students
-            if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
+            // Ensure only master and studentmanager roles can approve students
+            if (req.role !== UserRoleEnums.Admin && (req.adminRole !== AdminRoleEnums.StudentManager || req.role !== UserRoleEnums.Master)) {
                 return res.status(403).json({ success: false, message: ['Permission denied'] });
             }
 
             // Update student status to "approved"
             const student = await StudentModel.findByIdAndUpdate(
                 studentId,
-                { $set: { status: 'approved' } },
+                { $set: { status: StudentStatusEnums.Verified } },
                 { new: true }
             );
 
@@ -171,19 +223,15 @@ class AdminController {
         try {
             const { studentId } = req.body;
 
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: ['Unauthorized'] });
-            }
-
-            // Ensure only authorized roles can reject students
-            if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
+            // Ensure only master and studentmanager roles can reject students
+            if (req.role !== UserRoleEnums.Admin && (req.adminRole !== AdminRoleEnums.StudentManager || req.role !== UserRoleEnums.Master)) {
                 return res.status(403).json({ success: false, message: ['Permission denied'] });
             }
 
             // Update student status to "rejected"
             const student = await StudentModel.findByIdAndUpdate(
                 studentId,
-                { $set: { status: 'rejected' } },
+                { $set: { status: StudentStatusEnums.Rejected } },
                 { new: true }
             );
 
@@ -198,31 +246,31 @@ class AdminController {
             });
         } catch (error) {
             console.error(error);
-            return res.status(500).json({ success: false, message: ['Unable to reject student'] });
+            return res.status(500).json({ success: false, message: ['Unable to reject student,Please try again later'] });
         }
     }
 
 
     // Middleware to check if the admin is authenticated
-   static async middlewareCheck(req: AuthenticatedRequest, res: Response): Promise<any> {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ success: false, message: ['Unauthorized'] });
-        }
-        // Ensure only authorized roles can access this endpoint
-        if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
-            return res.status(403).json({ success: false, message: ['Permission denied'] });
-        }
-        return res.status(200).json({
-            success: true,
-            message: ['Admin is authenticated and authorized'],
-            data: { identityId: req.user.identityId, role: req.user.role },
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: ['Internal server error'] });
-    }
+    //    static async middlewareCheck(req: AuthenticatedRequest, res: Response): Promise<any> {
+    //     try {
+    //         if (!req.user) {
+    //             return res.status(401).json({ success: false, message: ['Unauthorized'] });
+    //         }
+    //         // Ensure only authorized roles can access this endpoint
+    //         if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
+    //             return res.status(403).json({ success: false, message: ['Permission denied'] });
+    //         }
+    //         return res.status(200).json({
+    //             success: true,
+    //             message: ['Admin is authenticated and authorized'],
+    //             data: { identityId: req.user.identityId, role: req.user.role },
+    //         });
+    //     } catch (error) {
+    //         console.error(error);
+    //         res.status(500).json({ success: false, message: ['Internal server error'] });
+    //     }
 }
-}
+
 
 export default AdminController;
