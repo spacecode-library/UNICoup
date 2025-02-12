@@ -12,6 +12,8 @@ export interface IMERCHANT extends Document {
   businesslogo: string;
   businesswebsite: string;
   businessdescription: string;
+  status: string;
+  isCompletedRegistration: boolean;
   isdeleted: boolean;
 }
 
@@ -28,6 +30,8 @@ const MerchantSchema: Schema = new Schema(
     businesslogo: { type: String, required: true },
     businesswebsite: { type: String, required: false, trim: true },
     businessdescription: { type: String, required: true, trim: true },
+    status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
+    isCompletedRegistration: { type: Boolean, default: false },
     isdeleted: { type: Boolean, default: false }
   },
 

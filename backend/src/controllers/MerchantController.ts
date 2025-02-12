@@ -1,83 +1,131 @@
 import { Request, Response } from 'express';
-import StudentModel from '../models/StudentModel.js';
-import UserModel from '../models/UserModel.js';
-import bcrypt from 'bcrypt';
+import mongoose from 'mongoose';
+import MerchantModel from '../models/MerchantModel.js';
+import cloudinary from 'cloudinary';
+import multer from 'multer';
 import { generateAccessToken, generateRefreshToken } from '../utils/Jwt.js';
 import AuthModel from '../models/Authmodel.js';
-import mongoose from 'mongoose';
+import { UserRoleEnums } from '../constants/EnumTypes.js';
+
+// Extend the Request type to include the `user` property
+interface AuthenticatedRequest extends Request {
+    identityId: string;
+}
 
 class MerchantController {
-
-
-    //merchant login...
-    static async merchantLogin(req: Request, res: Response): Promise<any> {
+    // Step 1: Submit basic information
+    static async submitBasicInfo(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
-            let { email, password, role } = req.body;
+            const { businessname, businessaddress, businessphone, businesswebsite, businessdescription } = req.body;
+            const userId = req.identityId;
 
-            const getMerchantData = await UserModel.findOne(
-                { email: email, isdeleted: false },
-                { password: 1, role: 1 }
-            )
-
-            if(getMerchantData === null || getMerchantData.role !== role ){
-                return res.status(400).json({ success: false, message: ["Invalid Email or Password"] ,data:{}});
+            // Validate required fields
+            if (!businessname || !businessaddress || !businessphone || !businessdescription) {
+                return res.status(400).json({ success: false, message: ['All fields are required'] });
             }
 
-            const isMatch = await bcrypt.compare(password, getMerchantData.password);
-
-            if (!isMatch) {
-                return res.status(400).json({ success: false, message: ["Invalid Email or Password"] ,data:{}});
+            // Check if a merchant record already exists for this user
+            const existingMerchant = await MerchantModel.findOne({ userid: userId, isdeleted: false });
+            if (existingMerchant) {
+                return res.status(400).json({ success: false, message: ['Merchant profile already exists'] });
             }
 
-            const authTokenId = new mongoose.Types.ObjectId().toString();
+            // Create a new merchant record with basic information
+            const newMerchant = new MerchantModel({
+                _id: new mongoose.Types.ObjectId().toString(),
+                userid: userId,
+                businessname,
+                businessaddress,
+                businessphone,
+                businesswebsite,
+                businessdescription,
+                status: 'pending',
+                isCompletedRegistration: false,
+            });
 
-            const payload = {
-                authId: authTokenId,
-                identityId: getMerchantData.id,
-            }
+            await newMerchant.save();
 
-            let newDate = new Date();
-
-            const tokenExpiredAt = 60 * 60;
-            const accessToken = await generateAccessToken(payload, tokenExpiredAt);
-
-            const refreshTokenExpiredAt = 60 * 60 * 24 * 20;
-            const refreshToken = await generateRefreshToken(payload, refreshTokenExpiredAt);
-
-            const tokenData = new AuthModel();
-            tokenData._id = authTokenId;
-            tokenData.identityid = getMerchantData.id;
-            tokenData.token = accessToken;
-            tokenData.tokenExpiredAt = Math.floor(Date.now() / 1000) + (60 * 60);
-            tokenData.refreshToken = refreshToken;
-            tokenData.refreshTokenExpiredAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 20);
-
-            await new AuthModel(tokenData).save();
-
-            return res.status(200).json({
-                message: ['Merchant Login Successfully.'],
-                succeeded: true,
-                data: {
-                    identityId: getMerchantData.id,
-                    token: accessToken,
-                    tokenExpiredAt: newDate.setSeconds(tokenExpiredAt),
-                    refreshToken: refreshToken,
-                    refreshTokenExpiredAt: newDate.setSeconds(refreshTokenExpiredAt),
-                }
+            return res.status(201).json({
+                success: true,
+                message: ['Basic information submitted successfully'],
+                data: newMerchant._id,
             });
         } catch (error) {
             console.error(error);
-            res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
+            return res.status(500).json({ success: false, message: ['Unable to submit basic information'] });
         }
     }
 
-    static async middlewareCheck(req:Request,res:Response):Promise<any>{
+    // Step 2: Upload business certificate
+    static async uploadBusinessCertificate(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
-            return res.status(200).json({ success: true, message: ["Inside middleware check merchant"] });
+            const file = req.file;
+            const userId = req.identityId;
+
+            if (!file) {
+                return res.status(400).json({ success: false, message: ['No file uploaded'] });
+            }
+
+            // Find the merchant by userId
+            const merchant = await MerchantModel.findOne({ userid: userId, isdeleted: false });
+            if (!merchant) {
+                return res.status(404).json({ success: false, message: ['Merchant not found'] });
+            }
+
+            // Upload the file to Cloudinary
+            const cloudinaryResponse = await cloudinary.v2.uploader.upload(file.path, {
+                folder: 'merchant_certificates',
+                resource_type: 'auto', // Auto-detect file type (PDF or image)
+            });
+
+            // Save the file URL in the merchant record
+            merchant.BusinessCertificate = cloudinaryResponse.secure_url;
+            await merchant.save();
+
+            return res.status(200).json({
+                success: true,
+                message: ['Business certificate uploaded successfully'],
+            });
         } catch (error) {
             console.error(error);
-            res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
-            
+            return res.status(500).json({ success: false, message: ['Failed to upload business certificate'] });
+        }
+    }
+
+    // Step 3: Upload business logo
+    static async uploadBusinessLogo(req: AuthenticatedRequest, res: Response): Promise<any> {
+        try {
+            const file = req.file;
+            const userId = req.identityId;
+
+            if (!file) {
+                return res.status(400).json({ success: false, message: ['No file uploaded'] });
+            }
+
+            // Find the merchant by userId
+            const merchant = await MerchantModel.findOne({ userid: userId, isdeleted: false });
+            if (!merchant) {
+                return res.status(404).json({ success: false, message: ['Merchant not found'] });
+            }
+
+            // Upload the file to Cloudinary
+            const cloudinaryResponse = await cloudinary.v2.uploader.upload(file.path, {
+                folder: 'merchant_logos',
+                resource_type: 'image',
+            });
+
+            // Save the file URL in the merchant record
+            merchant.businesslogo = cloudinaryResponse.secure_url;
+            merchant.isCompletedRegistration = true; // Mark registration as complete
+            await merchant.save();
+
+            return res.status(200).json({
+                success: true,
+                message: ['Business logo uploaded successfully'],
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ success: false, message: ['Failed to upload business logo'] });
         }
     }
 }

@@ -84,32 +84,6 @@ class StudentController {
         }
     }
 
-    // Middleware to authenticate user
-    // static async authenticateUser(req: AuthenticatedRequest, res: Response, next: any): Promise<any> {
-    //     try {
-    //         const token = req.headers.authorization?.split(' ')[1];
-    //         if (!token) {
-    //             return res.status(401).json({ success: false, message: ['Authorization token missing'] });
-    //         }
-
-    //         // Validate access token
-    //         const decoded = await validateAccessToken(token);
-    //         if (!decoded || !decoded.identityId) {
-    //             return res.status(401).json({ success: false, message: ['Invalid token'] });
-    //         }
-
-    //         // Attach user data to request
-    //         req.user = {
-    //             identityId: decoded.identityId,
-    //             role: decoded.role,
-    //         };
-
-    //         next();
-    //     } catch (error) {
-    //         console.error(error);
-    //         return res.status(500).json({ success: false, message: ['Authentication failed'] });
-    //     }
-    // }
 
     // Initiate email verification process for onboarding
     static async initiateVerification(req: AuthenticatedRequest, res: Response): Promise<any> {
