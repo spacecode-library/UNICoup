@@ -6,6 +6,9 @@ export interface IMERCHANT extends Document {
   userid: string;
   businessname: string;
   businessaddress: string;
+  businesscity: string;
+  businessstate: string;
+  businesscountry: string;
   businessphone: string;
   BusinessCertificate: string;
   isVerifed: boolean;
@@ -24,6 +27,9 @@ const MerchantSchema: Schema = new Schema(
     userid: { type: String, required: true, trim: true },
     businessname: { type: String, required: true, trim: true },
     businessaddress: { type: String, required: true, trim: true },
+    businesscity: { type: String, required: true, trim: true },
+    businessstate: { type: String, required: true, trim: true },
+    businesscountry: { type: String, required: true, trim: true },
     businessphone: { type: String, required: true, trim: true },
     BusinessCertificate: { type: String, required: true },
     isVerifed: { type: Boolean, default: false },
@@ -34,6 +40,7 @@ const MerchantSchema: Schema = new Schema(
     isCompletedRegistration: { type: Boolean, default: false },
     isdeleted: { type: Boolean, default: false },
   },
+  
   { timestamps: true, discriminatorKey: "role" } // Enables role-based models
 );
 
