@@ -10,7 +10,7 @@ export interface IMERCHANT extends Document {
   BusinessCertificate: string;
   isVerifed: boolean;
   businesslogo: string;
-  businesswebsite: string;
+  businesswebsite?: string; // Optional field
   businessdescription: string;
   status: string;
   isCompletedRegistration: boolean;
@@ -20,7 +20,7 @@ export interface IMERCHANT extends Document {
 // Base Merchant Schema
 const MerchantSchema: Schema = new Schema(
   {
-    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString()},
+    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
     userid: { type: String, required: true, trim: true },
     businessname: { type: String, required: true, trim: true },
     businessaddress: { type: String, required: true, trim: true },
@@ -28,15 +28,32 @@ const MerchantSchema: Schema = new Schema(
     BusinessCertificate: { type: String, required: true },
     isVerifed: { type: Boolean, default: false },
     businesslogo: { type: String, required: true },
-    businesswebsite: { type: String, required: false, trim: true },
+    businesswebsite: { type: String, required: false, trim: true }, // Optional field
     businessdescription: { type: String, required: true, trim: true },
     status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
     isCompletedRegistration: { type: Boolean, default: false },
-    isdeleted: { type: Boolean, default: false }
+    isdeleted: { type: Boolean, default: false },
   },
-
   { timestamps: true, discriminatorKey: "role" } // Enables role-based models
 );
+
+// Pre-save hook to validate required fields when registration is marked as complete
+MerchantSchema.pre<IMERCHANT>('save', async function (next) {
+  if (this.isCompletedRegistration) {
+    const missingFields = [];
+    if (!this.businessname) missingFields.push('businessname');
+    if (!this.businessaddress) missingFields.push('businessaddress');
+    if (!this.businessphone) missingFields.push('businessphone');
+    if (!this.BusinessCertificate) missingFields.push('BusinessCertificate');
+    if (!this.businesslogo) missingFields.push('businesslogo');
+    if (!this.businessdescription) missingFields.push('businessdescription');
+
+    if (missingFields.length > 0) {
+      return next(new Error(`Missing required fields: ${missingFields.join(', ')}`));
+    }
+  }
+  next();
+});
 
 // Create Merchant Model
 const MerchantModel = mongoose.model<IMERCHANT>("MERCHANT", MerchantSchema);

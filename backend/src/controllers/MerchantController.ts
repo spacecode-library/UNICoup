@@ -3,9 +3,6 @@ import mongoose from 'mongoose';
 import MerchantModel from '../models/MerchantModel.js';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
-import { generateAccessToken, generateRefreshToken } from '../utils/Jwt.js';
-import AuthModel from '../models/Authmodel.js';
-import { UserRoleEnums } from '../constants/EnumTypes.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
@@ -30,20 +27,23 @@ class MerchantController {
                 return res.status(400).json({ success: false, message: ['Merchant profile already exists'] });
             }
 
-            // Create a new merchant record with basic information
-            const newMerchant = new MerchantModel({
-                _id: new mongoose.Types.ObjectId().toString(),
-                userid: userId,
-                businessname,
-                businessaddress,
-                businessphone,
-                businesswebsite,
-                businessdescription,
-                status: 'pending',
-                isCompletedRegistration: false,
-            });
-
-            await newMerchant.save();
+            // Create a new merchant record with basic information using partial updates
+            const newMerchant = await MerchantModel.findOneAndUpdate(
+                { userid: userId },
+                {
+                    $set: {
+                        userid: userId,
+                        businessname,
+                        businessaddress,
+                        businessphone,
+                        businesswebsite,
+                        businessdescription,
+                        status: 'pending',
+                        isCompletedRegistration: false,
+                    },
+                },
+                { upsert: true, new: true }
+            );
 
             return res.status(201).json({
                 success: true,
@@ -78,9 +78,12 @@ class MerchantController {
                 resource_type: 'auto', // Auto-detect file type (PDF or image)
             });
 
-            // Save the file URL in the merchant record
-            merchant.BusinessCertificate = cloudinaryResponse.secure_url;
-            await merchant.save();
+            // Update the merchant record with the business certificate URL using partial updates
+            await MerchantModel.findOneAndUpdate(
+                { userid: userId },
+                { $set: { BusinessCertificate: cloudinaryResponse.secure_url } },
+                { new: true }
+            );
 
             return res.status(200).json({
                 success: true,
@@ -114,10 +117,17 @@ class MerchantController {
                 resource_type: 'image',
             });
 
-            // Save the file URL in the merchant record
-            merchant.businesslogo = cloudinaryResponse.secure_url;
-            merchant.isCompletedRegistration = true; // Mark registration as complete
-            await merchant.save();
+            // Update the merchant record with the business logo URL and mark registration as complete using partial updates
+            await MerchantModel.findOneAndUpdate(
+                { userid: userId },
+                {
+                    $set: {
+                        businesslogo: cloudinaryResponse.secure_url,
+                        isCompletedRegistration: true,
+                    },
+                },
+                { new: true }
+            );
 
             return res.status(200).json({
                 success: true,
