@@ -7,11 +7,12 @@ export enum UserRoleEnums {
 }
 
 
-export enum AdminRoleEnums{
+export enum AdminRoleEnums {
     Default = 'DEFAULT',
     StudentManager = 'STUDENTMANAGER',
     DiscountManager = 'DISCOUNTMANAGER',
-    MerchantManager = 'MERCHANTMANAGER'
+    MerchantManager = 'MERCHANTMANAGER',
+    Master = "Master"
 }
 
 export enum StudentStatusEnums{
