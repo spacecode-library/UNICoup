@@ -5,6 +5,9 @@ import { upload } from "../middleware/fileUpload.js";
 
 const router = Router();
 
+// Login Route
+router.post("/login", MerchantController.merchantLogin); // Merchant login
+
 // Protected Routes (Require Merchant Middleware)
 router.post("/submit-basic-info", MerchantMW, MerchantController.submitBasicInfo); // Submit basic information
 router.post("/upload-certificate", MerchantMW, upload.single('file'), MerchantController.uploadBusinessCertificate); // Upload business certificate
