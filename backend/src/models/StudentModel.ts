@@ -11,6 +11,7 @@ export interface ISTUDENT extends Document {
   otp: string;
   otpExpires: Date;
   university: string;
+  universityDomain: string; //Discuss with Rahul
   major: string;
   StartYear: number;
   GraduationYear: number;
@@ -32,6 +33,7 @@ const StudentSchema: Schema = new Schema(
       otp: { type: String, required: false },
       otpExpires: { type: Date, required: false },
       university: { type: String, required: true, trim: true },
+      universityDomain: { type: String, required: false }, 
       major: { type: String, required: true, trim: true },
       StartYear: { type: Number, required: true },
       GraduationYear: { type: Number, required: true },

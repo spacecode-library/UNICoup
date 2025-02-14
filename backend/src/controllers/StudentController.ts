@@ -98,9 +98,21 @@ class StudentController {
 
             // Verify university domain
             const isUniversityEmail = await verifyUniversityDomain(email);
-            if (!isUniversityEmail) {
+
+
+
+
+            // To be tested later 
+            if (isUniversityEmail){
+               const universityDomain = extractDomain(email);
+               StudentModel.findByIdAndUpdate( { userid : req.identityId }, { $set: {universityDomain: universityDomain}}, { new: true } );
+            } else {
                 return res.status(400).json({ success:true ,message: ['Invalid university email'] });
             }
+
+
+
+
 
             // Check if an OTP already exists for this email
             const existingOtp = await OtpModel.findOne({ email, isdeleted: false, verified: 0 });
@@ -331,6 +343,15 @@ const validateStudentID = async (filePath: string, extractedText: string, studen
 
     const hasFace = faceDetectionResult.info.detection?.adv_face?.data.length > 0;
     return hasFace ?? false;
+};
+
+
+const extractDomain = (email?: string): string | null => {
+    if (!email || !email.includes('@')) {
+        console.error('Invalid email format:', email);
+        return null;
+    }
+    return email.split('@')[1];
 };
 
 export default StudentController;

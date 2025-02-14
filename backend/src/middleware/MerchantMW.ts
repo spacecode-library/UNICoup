@@ -32,6 +32,7 @@ export const MerchantMW = async (req: Request, res: Response, next: NextFunction
 
         req['identityId'] = getUserData._id;
         req['role'] = getUserData.role;
+        
         next();
     } catch (error) {
         console.error(error);

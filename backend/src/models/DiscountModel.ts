@@ -12,6 +12,7 @@ export interface IDiscount extends Document {
   discountCode?: string; // Discount code (if applicable)
   storeLink: string; // Link to the online store (for online businesses)
   totalUses: number; // Total allowed uses of the discount
+  StudentLimit: number; 
   remainingUses: number; // Remaining uses of the discount
   startDate: Date; // Start date of the discount
   endDate: Date; // Expiration date of the discount
@@ -39,6 +40,7 @@ const DiscountSchema: Schema = new Schema(
     discountCode: { type: String, required: false, trim: true },
     storeLink: { type: String, required: false, trim: true },
     totalUses: { type: Number, required: true, min: 1 },
+    StudentLimit: { type: Number, required: false },
     remainingUses: { type: Number, required: true, min: 0 },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
