@@ -9,10 +9,11 @@ export interface IDiscount extends Document {
   title: string; // Title of the discount
   description: string; // Description of the discount
   discountType: string; // Type of business: "Online" or "Offline"
-  discountCode?: string; // Discount code (if applicable)
   storeLink: string; // Link to the online store (for online businesses)
   totalUses: number; // Total allowed uses of the discount
   StudentLimit: number; 
+  discountpercentage: number;
+  startprice: number;
   remainingUses: number; // Remaining uses of the discount
   startDate: Date; // Start date of the discount
   endDate: Date; // Expiration date of the discount
@@ -37,10 +38,11 @@ const DiscountSchema: Schema = new Schema(
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     discountType: { type: String, enum: ["Online", "Offline"], required: true },
-    discountCode: { type: String, required: false, trim: true },
     storeLink: { type: String, required: false, trim: true },
     totalUses: { type: Number, required: true, min: 1 },
     StudentLimit: { type: Number, required: false },
+    discountpercentage: { type: Number, required: false },
+    startprice: { type: Number, required: false },
     remainingUses: { type: Number, required: true, min: 0 },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

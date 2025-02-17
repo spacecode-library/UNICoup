@@ -1,6 +1,7 @@
 import RedemptionModel from '../models/RedemptionModel.js';
 import DiscountModel from '../models/DiscountModel.js';
 import StudentModel from '../models/StudentModel.js';
+import PremiumPricingModel from '../models/PremiumPricingModel.js';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 
@@ -26,10 +27,19 @@ class RedemptionController {
         return res.status(403).json({ success: false, message: ['Student is not verified'] });
       }
 
+
       // Fetch discount data
       const discount = await DiscountModel.findOne({ _id: discountId, isDeleted: false });
       if (!discount) {
         return res.status(404).json({ success: false, message: ['Discount not found'] });
+      }
+      
+      
+      const pricing = await PremiumPricingModel.findOne({ }); 
+      
+      // Check if student is premium and discount is more than minimum discount
+      if(!student.isPremium && (discount.discountpercentage > pricing.discountminium)){
+        return res.redirect(301, '/subscription');
       }
 
       // Check discount availability
@@ -75,7 +85,6 @@ class RedemptionController {
         message: ['Discount redeemed successfully'],
         data: {
           redemptionCode,
-          discountCode: discount.discountCode, // Provide the discount code to the student
           redemptionDate: newRedemption.redemptionDate,
         },
       });
@@ -114,6 +123,7 @@ class RedemptionController {
       res.status(500).json({ success: false, message: ['Unable to fetch redemption history'] });
     }
   }
+
 }
 
 

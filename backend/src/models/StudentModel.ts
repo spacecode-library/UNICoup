@@ -21,6 +21,7 @@ export interface ISTUDENT extends Document {
   status: string;
   StudentIDSubmitted: boolean;
   isVerified: boolean; 
+  isPremium: boolean;
 }
 
 // Base Student Schema
@@ -43,6 +44,7 @@ const StudentSchema: Schema = new Schema(
       status: { type: String, enum: Object.values(StudentStatusEnums), default: StudentStatusEnums.Pending },
       StudentIDSubmitted: { type: Boolean, default: false },
       isVerified: { type: Boolean, default: false }, // Add this field
+      isPremium: { type: Boolean, default: false }, // Add this field
   },
   { timestamps: true, discriminatorKey: 'role' }
 );
