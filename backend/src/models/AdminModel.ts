@@ -1,24 +1,26 @@
 import mongoose, { Schema, Document } from "mongoose";
-
+import { AdminRoleEnums } from "../constants/EnumTypes.js";
 
 // Base Admin Interface
 export interface IADMIN extends Document {
-  id: mongoose.Types.ObjectId;
+  _id: string;
   userid: string;
   Adminphone: string;
   AdminProfilePic: string;
   master: boolean;
+  AdminRole : AdminRoleEnums;
   isdeleted: boolean;
 }
 
 // Base Admin Schema
 const AdminSchema: Schema = new Schema(
   {
-    id: { type: new mongoose.Types.ObjectId().toString() },
+    _id: { type: String, default: () => new mongoose.Types.ObjectId().toString()  },
     userid: { type: String, required: true, trim: true },
     Adminphone: { type: String, required: true, trim: true },
     AdminProfilePic: { type: String, required: true },
     master: { type: Boolean, default: false },
+    AdminRole:{ type: String, enum: Object.values(AdminRoleEnums), required: true , default: AdminRoleEnums.Default },
     isdeleted: { type: Boolean, default: false }
   },
 
