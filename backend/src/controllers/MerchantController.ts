@@ -7,6 +7,8 @@ import UserModel from '../models/UserModel.js';
 import AuthModel from '../models/Authmodel.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/Jwt.js';
 import bcrypt from 'bcrypt';
+import RedemptionModel from '../models/RedemptionModel.js';
+import DiscountModel from '../models/DiscountModel.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
@@ -162,6 +164,52 @@ class MerchantController {
             return res.status(500).json({ success: false, message: ['Failed to upload business certificate'] });
         }
     }
+
+
+    static async enterRedemptionCode(req, res) {
+        try {
+          const { redemptionCode } = req.body;
+          const merchantId = req.identityId; // from the authenticated request
+          if (!redemptionCode) {
+            return res.status(400).json({ success: false, message: ['Redemption code is required'] });
+          }
+    
+          // Look up the redemption document by redemption code
+          const redemption = await RedemptionModel.findOne({ redemptionCode });
+          if (!redemption) {
+            return res.status(404).json({ success: false, message: ['Redemption code not found'] });
+          }
+    
+          // Retrieve the discount linked to this redemption
+          const discount = await DiscountModel.findById(redemption.discountId);
+          if (!discount) {
+            return res.status(404).json({ success: false, message: ['Discount not found for this redemption'] });
+          }
+    
+          // Verify that the discount belongs to the merchant entering the code
+          if (discount.merchantId !== merchantId) {
+            return res.status(403).json({ success: false, message: ['Merchant not authorized for this redemption'] });
+          }
+    
+          // Ensure the redemption has not already been processed
+          if (redemption.isRedeemed) {
+            return res.status(400).json({ success: false, message: ['Redemption code has already been used'] });
+          }
+    
+          // Mark the redemption as redeemed
+          redemption.isRedeemed = true;
+          await redemption.save();
+    
+          return res.status(200).json({
+            success: true,
+            message: ['Redemption code validated and redemption completed'],
+            data: redemption,
+          });
+        } catch (error) {
+          console.error(error);
+          return res.status(500).json({ success: false, message: ['Failed to process redemption code'] });
+        }
+      }
 
     // Step 3: Upload business logo
     static async uploadBusinessLogo(req: AuthenticatedRequest, res: Response): Promise<any> {

@@ -7,6 +7,7 @@ import AuthModel from '../models/Authmodel.js';
 import mongoose from 'mongoose';
 import AdminModel from '../models/AdminModel.js';
 import { AdminRoleEnums, StudentStatusEnums, UserRoleEnums } from '../constants/EnumTypes.js';
+import MerchantPricingModel from '../models/MerchantPricingModel.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
@@ -124,6 +125,37 @@ class AdminController {
             res.status(500).json({ success: false, message: ['Unable to submit admin profile, please try again later'] });
         }
     }
+
+    static async adjustMerchantFees(req, res) {
+        try {
+          const { percentage } = req.body;
+          if (percentage === undefined) {
+            return res.status(400).json({ success: false, message: ['Percentage is required'] });
+          }
+    
+          // Update the single MerchantPricing document
+          let updatedPricing = await MerchantPricingModel.findOneAndUpdate(
+            {},
+            { allmerchantfee: percentage },
+            { new: true }
+          );
+    
+          // If no pricing document exists, create one
+          if (!updatedPricing) {
+            updatedPricing = new MerchantPricingModel({ allmerchantfee: percentage });
+            await updatedPricing.save();
+          }
+    
+          return res.status(200).json({
+            success: true,
+            message: ['Merchant fees adjusted successfully'],
+            data: updatedPricing,
+          });
+        } catch (error) {
+          console.error(error);
+          return res.status(500).json({ success: false, message: ['Failed to adjust merchant fees'] });
+        }
+      }
 
     // Middleware to authenticate admin
     // static async authenticateAdmin(req: AuthenticatedRequest, res: Response, next: any): Promise<Response> {
