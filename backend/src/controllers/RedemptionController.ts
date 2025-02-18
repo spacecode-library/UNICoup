@@ -2,6 +2,7 @@ import RedemptionModel from '../models/RedemptionModel.js';
 import DiscountModel from '../models/DiscountModel.js';
 import StudentModel from '../models/StudentModel.js';
 import PremiumPricingModel from '../models/PremiumPricingModel.js';
+import MerchantPricingModel from "../models/MerchantPricingModel.js"; // Assuming this model holds the fee percentage
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 
@@ -36,7 +37,7 @@ class RedemptionController {
       
       
       const pricing = await PremiumPricingModel.findOne({ }); 
-      
+
       // Check if student is premium and discount is more than minimum discount
       if(!student.isPremium && (discount.discountpercentage > pricing.discountminium)){
         return res.redirect(301, '/subscription');
@@ -71,7 +72,7 @@ class RedemptionController {
         discountId,
         redemptionCode,
         redemptionDate: new Date(),
-        isRedeemed: true,
+        isRedeemed: false,
       });
 
       await newRedemption.save();
@@ -121,6 +122,47 @@ class RedemptionController {
     } catch (error) {
       console.error(error);
       res.status(500).json({ success: false, message: ['Unable to fetch redemption history'] });
+    }
+  }
+
+  static async calculateMerchantFees(req, res) {
+    try {
+      const { discountId } = req.body;
+      if (!discountId) {
+        return res.status(400).json({ success: false, message: ['Discount ID is required'] });
+      }
+
+      // Fetch discount details
+      const discount = await DiscountModel.findById(discountId);
+      if (!discount) {
+        return res.status(404).json({ success: false, message: ['Discount not found'] });
+      }
+      const startPrice = discount.startprice;
+      if (startPrice === undefined) {
+        return res.status(400).json({ success: false, message: ['Discount does not have a start price'] });
+      }
+
+      // Count total redemptions for this discount (only count those already redeemed)
+      const redemptionCount = await RedemptionModel.countDocuments({ discountId, isRedeemed: true });
+
+      // Retrieve the merchant fee percentage from the single pricing document
+      const merchantPricing = await MerchantPricingModel.findOne({});
+      if (!merchantPricing) {
+        return res.status(404).json({ success: false, message: ['Merchant pricing document not found'] });
+      }
+      const feePercentage = merchantPricing.allmerchantfee;
+
+      // Calculate total fee (e.g., fee = redemptionCount * startPrice * (feePercentage/100))
+      const totalFee = redemptionCount * startPrice * (feePercentage / 100);
+
+      return res.status(200).json({
+        success: true,
+        message: ['Merchant fees calculated successfully'],
+        data: { discountId, redemptionCount, startPrice, feePercentage, totalFee },
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, message: ['Failed to calculate merchant fees'] });
     }
   }
 
