@@ -14,4 +14,8 @@ router.get("/pending-students", AdminMW, AdminController.getPendingStudents);
 router.post("/approve-student", AdminMW, AdminController.approveStudent);
 router.post("/reject-student", AdminMW, AdminController.rejectStudent);
 
+router.post("/create-tag",AdminMW,AdminController.createTag);
+router.get("/tags",AdminMW,AdminController.getAllTags);
+router.put("/tag/:id",AdminMW,AdminController.deleteTag);
+
 export default router;

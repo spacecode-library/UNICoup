@@ -17,6 +17,9 @@ export interface ISTUDENT extends Document {
   GraduationYear: number;
   StudentID: string;
   StudentCardDocument: string;
+  StudentCity:string,
+  StudentState:string,
+  StudentCountry:string,
   isdeleted: boolean;
   status: string;
   StudentIDSubmitted: boolean;
@@ -40,6 +43,9 @@ const StudentSchema: Schema = new Schema(
       GraduationYear: { type: Number, required: true },
       StudentID: { type: String, required: true },
       StudentCardDocument: { type: String, required: false },
+      StudentCity:{type:String,required:true},
+      StudentState:{type:String,required:true},
+      StudentCountry:{type:String,required:true},
       isdeleted: { type: Boolean, default: false },
       status: { type: String, enum: Object.values(StudentStatusEnums), default: StudentStatusEnums.Pending },
       StudentIDSubmitted: { type: Boolean, default: false },

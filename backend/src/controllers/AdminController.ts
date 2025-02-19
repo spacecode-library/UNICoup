@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import AdminModel from '../models/AdminModel.js';
 import { AdminRoleEnums, StudentStatusEnums, UserRoleEnums } from '../constants/EnumTypes.js';
 import MerchantPricingModel from '../models/MerchantPricingModel.js';
+import TagsModel from '../models/TagModel.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
@@ -224,7 +225,7 @@ class AdminController {
             const { studentId } = req.body;
 
             // Ensure only master and studentmanager roles can approve students
-            if (req.role !== UserRoleEnums.Admin && (req.adminRole !== AdminRoleEnums.StudentManager || req.role !== UserRoleEnums.Master)) {
+            if (req.role !== UserRoleEnums.Admin && (req.adminRole !== AdminRoleEnums.StudentManager || req.role !== AdminRoleEnums.Master)) {
                 return res.status(403).json({ success: false, message: ['Permission denied'] });
             }
 
@@ -256,7 +257,7 @@ class AdminController {
             const { studentId } = req.body;
 
             // Ensure only master and studentmanager roles can reject students
-            if (req.role !== UserRoleEnums.Admin && (req.adminRole !== AdminRoleEnums.StudentManager || req.role !== UserRoleEnums.Master)) {
+            if (req.role !== UserRoleEnums.Admin && (req.adminRole !== AdminRoleEnums.StudentManager || req.role !== AdminRoleEnums.Master)) {
                 return res.status(403).json({ success: false, message: ['Permission denied'] });
             }
 
@@ -282,26 +283,56 @@ class AdminController {
         }
     }
 
+    static async createTag (req: Request, res: Response): Promise<any>{
+        try {
+          const { title, description } = req.body;
+          
+          // Validate input
+          if (!title || !description) {
+            return res.status(400).json({ success: false, message: "Title and description are required." });
+          }
+      
+          // Create a new tag document
+          const newTag = new TagsModel({ title, description });
+          const savedTag = await newTag.save();
+      
+          return res.status(201).json({ success: true, message: "Tag created successfully.", data: savedTag });
+        } catch (error) {
+          console.error("Error creating tag:", error);
+          return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+    };
+      
+      static async getAllTags (req: Request, res: Response): Promise<any> {
+        try {
+          // Fetch all tags that are not marked as deleted
+          const tags = await TagsModel.find({ isDeleted: false });
+          return res.status(200).json({ success: true, message: "Tags fetched successfully.", data: tags });
+        } catch (error) {
+          console.error("Error fetching tags:", error);
+          return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+      };
 
-    // Middleware to check if the admin is authenticated
-    //    static async middlewareCheck(req: AuthenticatedRequest, res: Response): Promise<any> {
-    //     try {
-    //         if (!req.user) {
-    //             return res.status(401).json({ success: false, message: ['Unauthorized'] });
-    //         }
-    //         // Ensure only authorized roles can access this endpoint
-    //         if (req.user.role !== 'master' && req.user.role !== 'user_approval') {
-    //             return res.status(403).json({ success: false, message: ['Permission denied'] });
-    //         }
-    //         return res.status(200).json({
-    //             success: true,
-    //             message: ['Admin is authenticated and authorized'],
-    //             data: { identityId: req.user.identityId, role: req.user.role },
-    //         });
-    //     } catch (error) {
-    //         console.error(error);
-    //         res.status(500).json({ success: false, message: ['Internal server error'] });
-    //     }
+      static async deleteTag (req: Request, res: Response): Promise<any> {
+        try {
+          const { id } = req.params;
+      
+          // Soft delete: update isDeleted to true
+          const tag = await TagsModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+          
+          if (!tag) {
+            return res.status(404).json({ success: false, message: "Tag not found." });
+          }
+          
+          return res.status(200).json({ success: true, message: "Tag deleted successfully.", data: tag });
+        } catch (error) {
+          console.error("Error deleting tag:", error);
+          return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+    }
+
+
 }
 
 

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { DiscountStatusEnums, DiscountTypeEnums } from "../constants/EnumTypes.js";
 
 export interface IDiscount extends Document {
   _id: string;
@@ -37,7 +38,7 @@ const DiscountSchema: Schema = new Schema(
     adminId: { type: String, required: false, trim: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
-    discountType: { type: String, enum: ["Online", "Offline"], required: true },
+    discountType: { type: String, enum: Object.values(DiscountTypeEnums), required: true },
     storeLink: { type: String, required: false, trim: true },
     totalUses: { type: Number, required: true, min: 1 },
     StudentLimit: { type: Number, required: false },
@@ -50,8 +51,8 @@ const DiscountSchema: Schema = new Schema(
     isOpenAll: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ["active", "expired", "disabled", "created"],
-      default: "created",
+      enum: Object.values(DiscountStatusEnums),
+      default: DiscountStatusEnums.Created,
     },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

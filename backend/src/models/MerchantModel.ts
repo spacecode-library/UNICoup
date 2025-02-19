@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { MerchantStatusEnums } from "../constants/EnumTypes.js";
 
 // Base User Interface
 export interface IMERCHANT extends Document {
@@ -36,7 +37,7 @@ const MerchantSchema: Schema = new Schema(
     businesslogo: { type: String, required: true },
     businesswebsite: { type: String, required: false, trim: true }, // Optional field
     businessdescription: { type: String, required: true, trim: true },
-    status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
+    status: { type: String, enum: Object.values(MerchantStatusEnums), default: MerchantStatusEnums.Pending },
     isCompletedRegistration: { type: Boolean, default: false },
     isdeleted: { type: Boolean, default: false },
   },
