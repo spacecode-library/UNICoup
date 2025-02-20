@@ -88,7 +88,7 @@ class StudentController {
     // Initiate email verification process for onboarding
     static async initiateVerification(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
-            const { email } = req.body;
+            const { email ,StudentCountry,StudentState,StudentCity,university, major, StartYear, GraduationYear, StudentID} = req.body;
 
             if (!email) {
                 return res.status(400).json({success:false , message: ['Email is required'] });
@@ -100,18 +100,13 @@ class StudentController {
             const isUniversityEmail = await verifyUniversityDomain(email);
 
 
-
-
             // To be tested later 
             if (isUniversityEmail){
                const universityDomain = extractDomain(email);
-               StudentModel.findByIdAndUpdate( { userid : req.identityId }, { $set: {universityDomain: universityDomain}}, { new: true } );
+               await StudentModel.findOneAndUpdate( { userid : req.identityId }, { $set: {universityDomain: universityDomain,StudentCountry:StudentCountry,StudentState:StudentState,StudentCity:StudentCity,university:university,major:major,StartYear:StartYear,GraduationYear:GraduationYear,StudentID:StudentID}},{ upsert: true , new: true } );
             } else {
                 return res.status(400).json({ success:true ,message: ['Invalid university email'] });
             }
-
-
-
 
 
             // Check if an OTP already exists for this email
@@ -125,10 +120,10 @@ class StudentController {
             const currentTimestamp = Math.floor(Date.now() / 1000);
 
             // Send OTP to the user's email
-            const otpSend = await sendEmailVerificationOTP(email, OTP);
-            if (!otpSend) {
-                return res.status(500).json({ message: 'Unable to send OTP, please try again later' });
-            }
+            // const otpSend = await sendEmailVerificationOTP(email, OTP);
+            // if (!otpSend) {
+            //     return res.status(500).json({ message: 'Unable to send OTP, please try again later' });
+            // }
 
             // Save OTP details in the OtpModel
             const otpData = new OtpModel({
@@ -268,7 +263,7 @@ class StudentController {
 
     // Upload Student ID and validate it
     static async uploadStudentID(req: AuthenticatedRequest, res: Response): Promise<any> {
-        const { name, university, major, StartYear, GraduationYear, StudentID } = req.body;
+        const { name } = req.body;
         const file = req.file;
 
         if (!file) {
@@ -307,11 +302,11 @@ class StudentController {
 
             // Step 3: Save the document URL and update student details
             // student.name = name;
-            student.university = university;
-            student.major = major;
-            student.StartYear = StartYear;
-            student.GraduationYear = GraduationYear;
-            student.StudentID = StudentID;
+            // student.university = university;
+            // student.major = major;
+            // student.StartYear = StartYear;
+            // student.GraduationYear = GraduationYear;
+            // student.StudentID = StudentID;
             student.StudentCardDocument = file.path; // Cloudinary URL
             student.status = StudentStatusEnums.Pending; // Set status to verified after document upload
             student.StudentIDSubmitted = true;
@@ -330,19 +325,21 @@ const validateStudentID = async (filePath: string, extractedText: string, studen
     // Check if the document contains the student's name
     console.log(extractedText)
     const isNameValid = extractedText.toLowerCase().includes(studentName.toLowerCase());
+    console.log(isNameValid);
     if (!isNameValid) {
         return false;
     }
-
+    return true;
     // Check if the document contains a face using Cloudinary's Advanced Facial Attributes Detection
-    const faceDetectionResult = await cloudinary.v2.uploader.explicit(filePath, {
-        resource_type: 'image',
-        type: 'upload',
-        detection: 'adv_face',
-    });
+    // const faceDetectionResult = await cloudinary.v2.uploader.explicit(filePath, {
+    //     resource_type: 'image',
+    //     type: 'upload',
+    //     detection: 'adv_face',
+    // });
 
-    const hasFace = faceDetectionResult.info.detection?.adv_face?.data.length > 0;
-    return hasFace ?? false;
+    // const hasFace = faceDetectionResult.info.detection?.adv_face?.data?.length > 0;
+    
+    // return hasFace ?? false;
 };
 
 

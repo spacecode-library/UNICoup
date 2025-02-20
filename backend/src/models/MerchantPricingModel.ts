@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IMerchantPricing extends Document {
+export interface IMerchantPricingModel extends Document {
   _id: string;
   allmerchantfee: number;
 }
 
-const MerchantSchema: Schema = new Schema(
+const MerchantPricingSchema: Schema = new Schema(
   {
     _id: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
     allmerchantfee: { type: Number, required: true, min: 1 },
@@ -13,5 +13,5 @@ const MerchantSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-const MerchantModel = mongoose.model<IMerchantPricing>("PremiumPricing", MerchantSchema);
-export default MerchantModel;
+const MerchantPricingModel = mongoose.model<IMerchantPricingModel>("MerchantPricingSchema", MerchantPricingSchema);
+export default MerchantPricingModel;

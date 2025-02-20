@@ -9,6 +9,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/Jwt.js';
 import bcrypt from 'bcrypt';
 import RedemptionModel from '../models/RedemptionModel.js';
 import DiscountModel from '../models/DiscountModel.js';
+import { MerchantStatusEnums, UserRoleEnums } from '../constants/EnumTypes.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
@@ -43,6 +44,7 @@ class MerchantController {
                 const payload = {
                     authId: authTokenId,
                     identityId: getMerchantData.id,
+                    role:UserRoleEnums.Merchant
                 }
     
                 let newDate = new Date();
@@ -83,7 +85,7 @@ class MerchantController {
     // Step 1: Submit basic information
     static async submitBasicInfo(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
-            const { businessname, businessaddress, businessphone, businesswebsite, businessdescription } = req.body;
+            const { businessname, businessaddress, businessphone, businesswebsite, businessdescription,businesscity,businessstate,businesscountry } = req.body;
             const userId = req.identityId;
 
             // Validate required fields
@@ -105,10 +107,13 @@ class MerchantController {
                         userid: userId,
                         businessname,
                         businessaddress,
+                        businesscity,
+                        businessstate,
+                        businesscountry,
                         businessphone,
                         businesswebsite,
                         businessdescription,
-                        status: 'pending',
+                        status: MerchantStatusEnums.Pending,
                         isCompletedRegistration: false,
                     },
                 },
@@ -144,14 +149,16 @@ class MerchantController {
 
             // Upload the file to Cloudinary
             const cloudinaryResponse = await cloudinary.v2.uploader.upload(file.path, {
-                folder: 'merchant_certificates',
+                // folder: 'merchant_certificates',
+                type: 'upload',
                 resource_type: 'auto', // Auto-detect file type (PDF or image)
             });
 
+            console.log(cloudinaryResponse,"response from cloudinary")
             // Update the merchant record with the business certificate URL using partial updates
             await MerchantModel.findOneAndUpdate(
                 { userid: userId },
-                { $set: { BusinessCertificate: cloudinaryResponse.secure_url } },
+                { $set: { BusinessCertificate: file.path } },
                 { new: true }
             );
 
