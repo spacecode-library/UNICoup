@@ -11,6 +11,7 @@ export const MerchantMW = async (req: Request, res: Response, next: NextFunction
 
         // Validate token
         const tokenPayload = await validateAccessToken(token);
+       
         if (!tokenPayload || tokenPayload.role !== UserRoleEnums.Merchant) {
             return res.status(401).json({ success: false, message: ['Invalid Token'] });
         }
