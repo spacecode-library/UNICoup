@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "noEmitOnError": false,
+    "skipLibCheck": true,
     "rootDirs": ["src"],
     "outDir": "dist",
     "lib": ["es2020", "dom"],
