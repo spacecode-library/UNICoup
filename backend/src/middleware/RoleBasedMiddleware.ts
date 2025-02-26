@@ -1,3 +1,4 @@
+//@ts-nocheck
 import jwt from 'jsonwebtoken';
 import { AdminMW } from './AdminMW.js';
 import { MerchantMW } from './MerchantMW.js';
