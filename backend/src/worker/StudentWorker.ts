@@ -14,7 +14,7 @@ export async function sendEmailToVerifyGraduationCron  () {
     const graduatingStudents = await StudentModel.find({
       GraduationYear: currentYear,
       isdeleted: false,
-      // hasGraduated: false,
+      hasGraduated: false,
     },
     { email: 1, GraduationYear: 1 }
   )
