@@ -5,7 +5,9 @@ import userRoutes from './routes/UserRoutes.js'
 import studentRoutes from './routes/StudentRoutes.js'
 import adminRoutes from './routes/AdminRoutes.js'
 import merchantRoutes from './routes/MerchantRoutes.js'
+import discountRoutes from './routes/DiscountRoutes.js'
 import cors from 'cors';
+import { sendEmailToVerifyGraduationCron } from "./worker/StudentWorker.js";
 
 const app: Application = express();
 const PORT = process.env.PORT || 7000;
@@ -30,6 +32,12 @@ app.use("/api/admin",adminRoutes)
 
 // Merchant Routes
 app.use("/api/merchant",merchantRoutes)
+
+//Discount Routes
+app.use("/api/discount",discountRoutes)
+
+//worker
+sendEmailToVerifyGraduationCron();
 
 app.get("/", (req: Request,res: Response): any => {
     return res.json({ message: "Hey, it's working " });

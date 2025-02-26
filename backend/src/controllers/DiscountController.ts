@@ -1,10 +1,11 @@
 import DiscountModel from '../models/DiscountModel.js';
 import cloudinary from 'cloudinary';
 import mongoose from 'mongoose';
-import { UserRoleEnums, AdminRoleEnums, DiscountStatusEnums } from '../constants/EnumTypes.js';
+import { UserRoleEnums, AdminRoleEnums, DiscountStatusEnums, DiscountTypeEnums } from '../constants/EnumTypes.js';
 import { Request, Response } from 'express';
 import StudentModel from '../models/StudentModel.js';
 import PremiumPricingModel from '../models/PremiumPricingModel.js';
+import MerchantModel from '../models/MerchantModel.js';
 
 
 // Extend the Request type to include the `user` property
@@ -27,7 +28,8 @@ class DiscountController {
         eligibilityCriteria,
         discountType,
         endDate,
-        discountCode,
+        startprice,
+        discountpercentage,
         storeLink,
         tags,
         isOpenAll,
@@ -41,37 +43,43 @@ class DiscountController {
         !description ||
         !totalUses ||
         !discountType ||
-        !endDate ||
-        !tags ||
-        !merchantCity ||
-        !merchantCountry
+        !endDate 
+        // !tags ||
+        // !merchantCity ||
+        // !merchantCountry
       ) {
         return res.status(400).json({ success: false, message: ['All fields are required'] });
       }
 
       // Validate discount type
-      if (!['Online', 'Offline'].includes(discountType)) {
-        return res.status(400).json({ success: false, message: ['Invalid discount type'] });
-      }
+      // if (!DiscountTypeEnums.includes(discountType)) {
+      //   return res.status(400).json({ success: false, message: ['Invalid discount type'] });
+      // }
 
       // Validate tags (ensure exactly 3 tags are provided)
-      if (!Array.isArray(tags) || tags.length !== 3) {
-        return res.status(400).json({ success: false, message: ['Exactly 3 tags are required'] });
-      }
+      // if (!Array.isArray(tags) || tags.length !== 3) {
+      //   return res.status(400).json({ success: false, message: ['Exactly 3 tags are required'] });
+      // }
 
       // Check user role and permissions
       const { role, adminRole, identityId } = req;
 
       if (role === UserRoleEnums.Merchant) {
+        const merchant = await MerchantModel.findOne(
+          {userid:identityId},
+          {businesscity:1,businesscountry:1}
+        );
+      
         // Merchant can only submit a discount for review
         const newDiscount = new DiscountModel({
           merchantId: identityId,
-          merchantCity,
-          merchantCountry,
+          merchantCity:merchant.businesscity,
+          merchantCountry:merchant.businesscountry,
           title,
           description,
           discountType,
-          discountCode,
+          startprice,
+          discountpercentage,
           storeLink,
           totalUses,
           StudentLimit,
@@ -103,7 +111,8 @@ class DiscountController {
           title,
           description,
           discountType,
-          discountCode,
+          startprice,
+          discountpercentage,
           storeLink,
           totalUses,
           StudentLimit,
@@ -177,15 +186,16 @@ class DiscountController {
   static async ApprovedDiscount(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { discountId, adminId, isApproved } = req.body;
-
+      console.log(discountId)
       const getDiscountData = await DiscountModel.findOne(
         { _id: discountId, isDeleted: false, isApproved: false },
         { isApproved: 1 }
       )
-      if (!getDiscountData) {
-        res.status(404).json({ success: false, message: ['Data not found.'] })
-      }
 
+      if (!getDiscountData) {
+        return res.status(404).json({ success: false, message: ['Data not found.'] })
+      }
+      console.log(getDiscountData)
       // Check user role and permissions
       const { role, adminRole, identityId } = req;
 
@@ -451,8 +461,7 @@ class DiscountController {
         isApproved: true,
         status: DiscountStatusEnums.Active,
         isDeleted: false,
-        discountpercentage:{$lte:pricing.discountminium},
-
+        discountpercentage:{$lte:10},
         remainingUses: { $gt: 0 },
         $or: [
           { merchantCity: city },
@@ -460,7 +469,7 @@ class DiscountController {
         ]
       };
 
-      if (tags.length > 0) {
+      if (tags?.length > 0) {
         filter.tags = { $in: tags };
       }
       

@@ -11,8 +11,11 @@ router.post("/login", AdminController.adminLogin);
 // router.get("/check", AdminMW, AdminController.middlewareCheck);
 router.post("/profile",AdminMW,AdminController.adminProfile);
 router.get("/pending-students", AdminMW, AdminController.getPendingStudents);
-router.post("/approve-student", AdminMW, AdminController.approveStudent);
-router.post("/reject-student", AdminMW, AdminController.rejectStudent);
+router.put("/approve-student", AdminMW, AdminController.approveStudent);
+router.put("/reject-student", AdminMW, AdminController.rejectStudent);
+
+router.put("/approve-merchant", AdminMW, AdminController.approveMerchant);
+router.put("/reject-merchant", AdminMW, AdminController.rejectMerchant);
 
 router.post("/create-tag",AdminMW,AdminController.createTag);
 router.get("/tags",AdminMW,AdminController.getAllTags);

@@ -6,12 +6,12 @@ import OtpModel from '../models/OtpModel.js';
 import StudentModel from '../models/StudentModel.js';
 import UserModel from '../models/UserModel.js';
 import { verifyUniversityDomain } from '../services/universityVerificationService.js';
-import sendEmailVerificationOTP from '../utils/SendEmailVerification.js';
 import { generateAccessToken, generateRefreshToken, validateAccessToken } from '../utils/Jwt.js';
 import AuthModel from '../models/Authmodel.js';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
 import { StudentStatusEnums } from '../constants/EnumTypes.js';
+import { sendEmailVerificationOTP } from '../utils/SendEmailVerification.js';
 
 // Extend the Request type to include the `file` property and user data
 interface AuthenticatedRequest extends Request {
@@ -318,6 +318,109 @@ class StudentController {
             res.status(500).json({ success:false , message: ['Failed to upload Student ID'] });
         }
     }
+
+    // send otp for verifying graduation
+    static async sendOtpForGraduation(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+            const {identityId} = req;
+
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+
+            const student = await StudentModel.find(
+                {userid:identityId,isdeleted:false,hasGraduated:false},
+                {_id:1 , email:1}
+            )
+            if(!student){
+                return res.status(404).json({success:false,message:['No Data found']});
+            }
+
+            // Generate secure 4-digit OTP
+            const OTP = Array.from({ length: 4 }, () => crypto.randomInt(0, 10)).join('');
+
+            // Send OTP to user
+            const otpSend = await sendEmailVerificationOTP(student[0].email, OTP);
+            if (!otpSend) {
+                return res.status(500).json({ success: false, message: ["Unable to send OTP, please try again later"], data: {} });
+            }
+
+            const otpData = new OtpModel();
+            otpData.otp = OTP;
+            otpData.created = currentTimestamp;
+            otpData.expired = currentTimestamp + 300; // 5min validity..
+            otpData.email = student[0].email;
+            await new OtpModel(otpData).save();
+
+            res.status(201).json({
+                success: true,
+                message: ["Otp Send successfully"],
+                data: { id: otpData._id }
+            });
+        } catch (error) {
+            console.error('Error in sending otp for graduation',error);
+            res.status(500).json({success:false,message:['Failed to send otp for graduation']});
+        }
+
+    }
+
+    // verify graduation status
+    static async verifyGraduation(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+            const {identityId} = req;
+            const { requestId, otp } = req.body;
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+
+            const getOtpData = await OtpModel.findOne(
+                { _id: requestId,isdeleted:false },
+                { _id: 1, otp: 1, expired: 1, verifyAttempts: 1, email: 1 }
+            );
+
+            if (getOtpData == null) {
+                return res.status(400).json({
+                    success: false,
+                    message: ["Error occured while verify otp."],
+                    data: {}
+                })
+            }
+
+            let getotp = getOtpData.otp;
+            let otpExpired = getOtpData.expired;
+            let verifyAttempts = getOtpData.verifyAttempts;
+
+            if (getotp != otp || currentTimestamp > otpExpired) {
+                return res.status(403).json({
+                    message: ["Invalid OTP please try again later."],
+                    succeeded: false,
+                    data: {}
+                })
+            }
+
+            verifyAttempts += 1;
+
+            await OtpModel.findByIdAndUpdate(getOtpData._id, {
+                $set: {
+                    verifyAttempts: verifyAttempts,
+                    verified: 1
+                }
+            },
+            { new: true });
+
+            await StudentModel.findOneAndUpdate(
+                { userid: identityId, isdeleted: false },
+                { $set: { hasGraduated:true , graduationVerifyTime: Date.now() } },
+                { upsert: true, new: true }
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: ["Graduation status verified successfully."],
+                data: {}
+            });            
+        } catch (error) {
+            console.error('Error in verifying graduation:', error);
+            res.status(500).json({ success:false , message: ['Failed to verify graduation status'] });
+        }
+    }
+
 }
 
 // Helper function to validate the Student ID document
@@ -341,6 +444,8 @@ const validateStudentID = async (filePath: string, extractedText: string, studen
     
     // return hasFace ?? false;
 };
+
+
 
 
 const extractDomain = (email?: string): string | null => {

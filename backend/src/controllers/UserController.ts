@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import UserModel, { UserRole } from '../models/UserModel.js';
-import sendEmailVerificationOTP from '../utils/SendEmailVerification.js';
+import {sendEmailVerificationOTP} from '../utils/SendEmailVerification.js';
 import OtpModel from '../models/OtpModel.js';
 import mongoose from 'mongoose';
 import { generateAccessToken, generateRefreshToken } from '../utils/Jwt.js';
