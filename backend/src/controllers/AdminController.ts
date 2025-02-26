@@ -6,9 +6,10 @@ import { generateAccessToken, generateRefreshToken, validateAccessToken } from '
 import AuthModel from '../models/Authmodel.js';
 import mongoose from 'mongoose';
 import AdminModel from '../models/AdminModel.js';
-import { AdminRoleEnums, StudentStatusEnums, UserRoleEnums } from '../constants/EnumTypes.js';
+import { AdminRoleEnums, MerchantStatusEnums, StudentStatusEnums, UserRoleEnums } from '../constants/EnumTypes.js';
 import MerchantPricingModel from '../models/MerchantPricingModel.js';
 import TagsModel from '../models/TagModel.js';
+import MerchantModel from '../models/MerchantModel.js';
 
 // Extend the Request type to include the `user` property
 interface AuthenticatedRequest extends Request {
@@ -29,7 +30,7 @@ class AdminController {
             );
 
             const getAdminRoleData = await AdminModel.findOne(
-                { _id: getAdminData._id, isdeleted: false },
+                { userid: getAdminData._id, isdeleted: false },
                 { AdminRole: 1 }
             )
 
@@ -41,7 +42,6 @@ class AdminController {
             if (!isMatch) {
                 return res.status(400).json({ success: false, message: ['Invalid Email or Password'], data: {} });
             }
-
             const authTokenId = new mongoose.Types.ObjectId().toString();
             const payload = {
                 authId: authTokenId,
@@ -280,6 +280,72 @@ class AdminController {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ success: false, message: ['Unable to reject student,Please try again later'] });
+        }
+    }
+
+    // Approve a merchant
+    static async approveMerchant(req: AuthenticatedRequest, res: Response): Promise<any> {
+        try {
+            const { merchantId } = req.body;
+
+            // Ensure only master and merchant manager roles can approve merchant
+            if (req.role !== UserRoleEnums.Admin ||
+                (req.adminRole !== AdminRoleEnums.MerchantManager && req.adminRole !== AdminRoleEnums.Master)) {
+                return res.status(403).json({ success: false, message: ['Permission denied'] });
+            }
+
+            // Update merchant status to "approved"
+            const merchant = await MerchantModel.findByIdAndUpdate(
+                merchantId,
+                { $set: { status: MerchantStatusEnums.Verified } },
+                { new: true }
+            );
+
+            if (!merchant) {
+                return res.status(404).json({ success: false, message: ['Merchant not found'] });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: ['Merchant approved successfully'],
+                data: merchant,
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ success: false, message: ['Unable to approve merchant'] });
+        }
+    }
+
+     // Reject a merchant
+     static async rejectMerchant(req: AuthenticatedRequest, res: Response): Promise<any> {
+        try {
+            const { merchantId } = req.body;
+
+            // Ensure only master and merchantmanager roles can reject merchant
+            if (req.role !== UserRoleEnums.Admin ||
+                (req.adminRole !== AdminRoleEnums.MerchantManager && req.adminRole !== AdminRoleEnums.Master)) {
+                return res.status(403).json({ success: false, message: ['Permission denied'] });
+            }
+
+            // Update merchant status to "rejected"
+            const merchant = await MerchantModel.findByIdAndUpdate(
+                merchantId,
+                { $set: { status: MerchantStatusEnums.Rejected } },
+                { new: true }
+            );
+
+            if (!merchant) {
+                return res.status(404).json({ success: false, message: ['Merchant not found'] });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: ['Merchant rejected successfully'],
+                data: merchant,
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ success: false, message: ['Unable to reject merchant,Please try again later'] });
         }
     }
 

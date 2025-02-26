@@ -136,38 +136,37 @@ class MerchantController {
         try {
             const file = req.file;
             const userId = req.identityId;
-
+    
             if (!file) {
                 return res.status(400).json({ success: false, message: ['No file uploaded'] });
             }
-
+    
             // Find the merchant by userId
             const merchant = await MerchantModel.findOne({ userid: userId, isdeleted: false });
             if (!merchant) {
                 return res.status(404).json({ success: false, message: ['Merchant not found'] });
             }
-
-            // Upload the file to Cloudinary
+    
+            // Upload the file to Cloudinary with proper folder and resource type
             const cloudinaryResponse = await cloudinary.v2.uploader.upload(file.path, {
-                // folder: 'merchant_certificates',
-                type: 'upload',
+                folder: 'merchant_certificates', // Ensure folder is set as desired
                 resource_type: 'auto', // Auto-detect file type (PDF or image)
             });
-
-            console.log(cloudinaryResponse,"response from cloudinary")
-            // Update the merchant record with the business certificate URL using partial updates
+    
+            // console.log(cloudinaryResponse, "response from cloudinary");
+    
+            // Update the merchant record with the business certificate URL from Cloudinary
             await MerchantModel.findOneAndUpdate(
                 { userid: userId },
-                { $set: { BusinessCertificate: file.path } },
+                { $set: { BusinessCertificate: cloudinaryResponse.secure_url } },
                 { new: true }
             );
-
+    
             return res.status(200).json({
                 success: true,
                 message: ['Business certificate uploaded successfully'],
             });
         } catch (error) {
-            console.error(error);
             return res.status(500).json({ success: false, message: ['Failed to upload business certificate'] });
         }
     }
