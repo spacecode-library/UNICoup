@@ -68,9 +68,9 @@ class StudentController {
 
             return res.status(200).json({
                 message: ['Student Login Successfully.'],
-                succeeded: true,
+                success: true,
                 data: {
-                    identityId: getStudentData.id,
+                    userId: getStudentData.id,
                     token: accessToken,
                     tokenExpiredAt: newDate.setSeconds(tokenExpiredAt),
                     refreshToken: refreshToken,
