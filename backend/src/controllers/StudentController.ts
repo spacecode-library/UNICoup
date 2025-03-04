@@ -70,7 +70,7 @@ class StudentController {
                 message: ['Student Login Successfully.'],
                 success: true,
                 data: {
-                    userId: getStudentData.id,
+                    identityid: getStudentData.id,
                     token: accessToken,
                     tokenExpiredAt: newDate.setSeconds(tokenExpiredAt),
                     refreshToken: refreshToken,
