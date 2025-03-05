@@ -84,7 +84,70 @@ class StudentController {
         }
     }
 
-
+    static async getStudentStatus(req: AuthenticatedRequest, res: Response): Promise<any> {
+        try {
+            const { identityId } = req;
+            
+            if (!identityId) {
+                return res.status(401).json({ 
+                    success: false, 
+                    message: ['Authentication required'], 
+                    data: null 
+                });
+            }
+    
+            // Find the student by user ID
+            const student = await StudentModel.findOne({ userid: identityId, isdeleted: false });
+            
+            if (!student) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: ['Student profile not found'], 
+                    data: null 
+                });
+            }
+    
+            // Get the user's email from UserModel if not already in student
+            let email = student.email;
+            if (!email) {
+                const userData = await UserModel.findOne({ _id: identityId, isdeleted: false });
+                if (userData) {
+                    email = userData.email;
+                }
+            }
+    
+            // Prepare the response data
+            const studentDetails: StudentDetails = {
+                email: email,
+                university: student.university || '',
+                universityDomain: student.universityDomain || '',
+                major: student.major || '',
+                StartYear: student.StartYear || 0,
+                GraduationYear: student.GraduationYear || 0,
+                StudentID: student.StudentID || '',
+                StudentCardDocument: student.StudentCardDocument || '',
+                StudentCity: student.StudentCity || '',
+                StudentState: student.StudentState || '',
+                StudentCountry: student.StudentCountry || '',
+                isVerified: student.isVerified || false,
+                status: student.status || StudentStatusEnums.PENDING,
+                name: student.name || ''
+            };
+    
+            return res.status(200).json({
+                success: true,
+                message: ['Student status retrieved successfully'],
+                data: studentDetails
+            });
+        } catch (error) {
+            console.error('Error getting student status:', error);
+            return res.status(500).json({ 
+                success: false, 
+                message: ['Failed to retrieve student status'], 
+                data: null 
+            });
+        }
+    }
     // Initiate email verification process for onboarding
     static async initiateVerification(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
