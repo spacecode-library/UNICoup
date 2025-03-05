@@ -11,6 +11,7 @@ router.post("/login", StudentController.studentLogin); // Login route for studen
 
 // Protected Routes (Require Authentication Middleware)
 // router.get("/student/check", StudentMW, StudentController.middlewareCheck); // Check if student is authenticated
+router.get("/status", StudentMW, StudentController.getStudentStatus);
 router.post("/initiate-verification", StudentMW, StudentController.initiateVerification); // Initiate email verification
 router.post("/verify-otp", StudentMW, StudentController.verifyOTP); // Verify OTP sent to email
 router.post("/resend-otp", StudentMW, StudentController.resendOtp); // Resend OTP if needed
