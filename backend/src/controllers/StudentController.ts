@@ -263,7 +263,7 @@ class StudentController {
 
     // Upload Student ID and validate it
     static async uploadStudentID(req: AuthenticatedRequest, res: Response): Promise<any> {
-        const { name } = req.body;
+        const { name, email } = req.body;
         const file = req.file;
 
         if (!file) {
@@ -299,7 +299,9 @@ class StudentController {
             if (!isDocumentValid) {
                 return res.status(400).json({ message: 'Invalid Student ID document' });
             }
-
+            if (email && !student.email) {
+                student.email = email;
+            }
             // Step 3: Save the document URL and update student details
             // student.name = name;
             // student.university = university;
