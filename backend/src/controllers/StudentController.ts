@@ -19,6 +19,23 @@ interface AuthenticatedRequest extends Request {
     identityId:string;
 }
 
+interface StudentDetails {
+  email: any;
+  name?: string;
+  university: string;
+  universityDomain: string;
+  major: string;
+  StartYear: number;
+  GraduationYear: number;
+  StudentID: string;
+  StudentCardDocument?: string;
+  StudentCity: string;
+  StudentState: string;
+  StudentCountry: string;
+  isVerified: boolean;
+  status: string;
+}
+
 class StudentController {
 
     static async studentLogin(req: Request, res: Response): Promise<any> {
@@ -130,7 +147,7 @@ class StudentController {
                 StudentState: student.StudentState || '',
                 StudentCountry: student.StudentCountry || '',
                 isVerified: student.isVerified || false,
-                status: student.status || StudentStatusEnums.PENDING,
+                status: student.status || StudentStatusEnums.Pending,
                 name: student.name || ''
             };
     
