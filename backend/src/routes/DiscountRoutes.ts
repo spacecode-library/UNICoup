@@ -40,4 +40,6 @@ router.post("/",StudentMW, DiscountController.GetAllDiscountByStudentLocation);
 router.post("/premium",StudentMW, DiscountController.GetAllDiscountByStudentPremiumLocation);
 
 
+router.get("/discounts/:discountId",StudentMW,DiscountController.DiscountById);
+
 export default router;

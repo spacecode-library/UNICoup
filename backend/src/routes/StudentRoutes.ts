@@ -17,4 +17,7 @@ router.post("/verify-otp", StudentMW, StudentController.verifyOTP); // Verify OT
 router.post("/resend-otp", StudentMW, StudentController.resendOtp); // Resend OTP if needed
 router.post("/upload-id", StudentMW, upload.single('file'),StudentController.uploadStudentID); // Upload Student ID after verification
 
+router.get("/student/redemptions",StudentMW,StudentController.studentRedemptionHistory)
+router.get("/student/redemptions/details/:redemptionId",StudentMW,StudentController.redemptionDetail)
+
 export default router;

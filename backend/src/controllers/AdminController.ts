@@ -129,34 +129,34 @@ class AdminController {
 
     static async adjustMerchantFees(req, res) {
         try {
-          const { percentage } = req.body;
-          if (percentage === undefined) {
-            return res.status(400).json({ success: false, message: ['Percentage is required'] });
-          }
-    
-          // Update the single MerchantPricing document
-          let updatedPricing = await MerchantPricingModel.findOneAndUpdate(
-            {},
-            { allmerchantfee: percentage },
-            { new: true }
-          );
-    
-          // If no pricing document exists, create one
-          if (!updatedPricing) {
-            updatedPricing = new MerchantPricingModel({ allmerchantfee: percentage });
-            await updatedPricing.save();
-          }
-    
-          return res.status(200).json({
-            success: true,
-            message: ['Merchant fees adjusted successfully'],
-            data: updatedPricing,
-          });
+            const { percentage } = req.body;
+            if (percentage === undefined) {
+                return res.status(400).json({ success: false, message: ['Percentage is required'] });
+            }
+
+            // Update the single MerchantPricing document
+            let updatedPricing = await MerchantPricingModel.findOneAndUpdate(
+                {},
+                { allmerchantfee: percentage },
+                { new: true }
+            );
+
+            // If no pricing document exists, create one
+            if (!updatedPricing) {
+                updatedPricing = new MerchantPricingModel({ allmerchantfee: percentage });
+                await updatedPricing.save();
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: ['Merchant fees adjusted successfully'],
+                data: updatedPricing,
+            });
         } catch (error) {
-          console.error(error);
-          return res.status(500).json({ success: false, message: ['Failed to adjust merchant fees'] });
+            console.error(error);
+            return res.status(500).json({ success: false, message: ['Failed to adjust merchant fees'] });
         }
-      }
+    }
 
     // Middleware to authenticate admin
     // static async authenticateAdmin(req: AuthenticatedRequest, res: Response, next: any): Promise<Response> {
@@ -316,8 +316,8 @@ class AdminController {
         }
     }
 
-     // Reject a merchant
-     static async rejectMerchant(req: AuthenticatedRequest, res: Response): Promise<any> {
+    // Reject a merchant
+    static async rejectMerchant(req: AuthenticatedRequest, res: Response): Promise<any> {
         try {
             const { merchantId } = req.body;
 
@@ -349,52 +349,125 @@ class AdminController {
         }
     }
 
-    static async createTag (req: Request, res: Response): Promise<any>{
+    static async createTag(req: Request, res: Response): Promise<any> {
         try {
-          const { title, description } = req.body;
-          
-          // Validate input
-          if (!title || !description) {
-            return res.status(400).json({ success: false, message: "Title and description are required." });
-          }
-      
-          // Create a new tag document
-          const newTag = new TagsModel({ title, description });
-          const savedTag = await newTag.save();
-      
-          return res.status(201).json({ success: true, message: "Tag created successfully.", data: savedTag });
+            const { title, description } = req.body;
+
+            // Validate input
+            if (!title || !description) {
+                return res.status(400).json({ success: false, message: "Title and description are required." });
+            }
+
+            // Create a new tag document
+            const newTag = new TagsModel({ title, description });
+            const savedTag = await newTag.save();
+
+            return res.status(201).json({ success: true, message: "Tag created successfully.", data: savedTag });
         } catch (error) {
-          console.error("Error creating tag:", error);
-          return res.status(500).json({ success: false, message: "Internal Server Error." });
+            console.error("Error creating tag:", error);
+            return res.status(500).json({ success: false, message: "Internal Server Error." });
         }
     };
-      
-      static async getAllTags (req: Request, res: Response): Promise<any> {
-        try {
-          // Fetch all tags that are not marked as deleted
-          const tags = await TagsModel.find({ isDeleted: false });
-          return res.status(200).json({ success: true, message: "Tags fetched successfully.", data: tags });
-        } catch (error) {
-          console.error("Error fetching tags:", error);
-          return res.status(500).json({ success: false, message: "Internal Server Error." });
-        }
-      };
 
-      static async deleteTag (req: Request, res: Response): Promise<any> {
+    static async getAllTags(req: Request, res: Response): Promise<any> {
         try {
-          const { id } = req.params;
-      
-          // Soft delete: update isDeleted to true
-          const tag = await TagsModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
-          
-          if (!tag) {
-            return res.status(404).json({ success: false, message: "Tag not found." });
-          }
-          
-          return res.status(200).json({ success: true, message: "Tag deleted successfully.", data: tag });
+            // Fetch all tags that are not marked as deleted
+            const tags = await TagsModel.find({ isDeleted: false });
+            return res.status(200).json({ success: true, message: "Tags fetched successfully.", data: tags });
         } catch (error) {
-          console.error("Error deleting tag:", error);
-          return res.status(500).json({ success: false, message: "Internal Server Error." });
+            console.error("Error fetching tags:", error);
+            return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+    };
+
+    static async deleteTag(req: Request, res: Response): Promise<any> {
+        try {
+            const { id } = req.params;
+
+            // Soft delete: update isDeleted to true
+            const tag = await TagsModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+
+            if (!tag) {
+                return res.status(404).json({ success: false, message: "Tag not found." });
+            }
+
+            return res.status(200).json({ success: true, message: "Tag deleted successfully.", data: tag });
+        } catch (error) {
+            console.error("Error deleting tag:", error);
+            return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+    }
+
+    static async studentData(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+               // Ensure only admin can see
+            if (req.role !== UserRoleEnums.Admin) {
+                return res.status(403).json({ success: false, message: ['Permission denied'] });
+            }
+
+            const studentData = await StudentModel.find({ isDeleted: false });
+
+            if(studentData.length == 0){
+                return res.status(403).json({ success: true, message: "No Data found", data: {} });
+            }
+
+            return res.status(200).json(
+                { success: true, message: "Student Data Retrived successfully.", data: studentData }
+            )
+
+        } catch (error) {
+            console.error("Error studentData:", error);
+            return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+    }
+    
+    static async merchantData(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+               // Ensure only admin can see
+            if (req.role !== UserRoleEnums.Admin) {
+                return res.status(403).json({ success: false, message: ['Permission denied'] });
+            }
+
+            const merchantData = await MerchantModel.find({ isDeleted: false });
+
+            if(merchantData.length == 0){
+                return res.status(403).json({ success: true, message: "No Data found", data: {} });
+            }
+
+            return res.status(200).json(
+                { success: true, message: "Merchant Data Retrived successfully.", data: merchantData }
+            )
+
+        } catch (error) {
+            console.error("Error merchantData:", error);
+            return res.status(500).json({ success: false, message: "Internal Server Error." });
+        }
+    }
+    
+    static async merchantDataByStatus (req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+
+            const { status } = req.params;
+                // Ensure only admin can see
+            if (req.role !== UserRoleEnums.Admin) {
+                return res.status(403).json({ success: false, message: ['Permission denied'] });
+            }
+
+            const merchantData = await MerchantModel.find(
+                {status:status,isdeleted:false}
+            )
+
+            if(merchantData.length == 0){
+                return res.status(403).json({ success: true, message: "No Data found", data: {} });
+            }
+
+            return  res.status(200).json(
+                { success: true, message: "Merchant Data Retrived successfully.", data: merchantData }
+            )
+
+        } catch (error) {
+            console.error("Error merchantDataByStatus:", error);
+            return res.status(500).json({ success: false, message: "Internal Server Error." });
         }
     }
 

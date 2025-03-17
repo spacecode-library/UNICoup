@@ -6,6 +6,7 @@ import studentRoutes from './routes/StudentRoutes.js'
 import adminRoutes from './routes/AdminRoutes.js'
 import merchantRoutes from './routes/MerchantRoutes.js'
 import discountRoutes from './routes/DiscountRoutes.js'
+import paymentRoutes from './routes/PaymentRoutes.js'
 import cors from 'cors';
 import { sendEmailToVerifyGraduationCron } from "./worker/StudentWorker.js";
 
@@ -35,6 +36,9 @@ app.use("/api/merchant",merchantRoutes)
 
 //Discount Routes
 app.use("/api/discount",discountRoutes)
+
+//Payment Routes
+app.use("/api/payment",paymentRoutes)
 
 //worker
 sendEmailToVerifyGraduationCron();

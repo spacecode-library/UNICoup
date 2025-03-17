@@ -461,7 +461,7 @@ class DiscountController {
         isApproved: true,
         status: DiscountStatusEnums.Active,
         isDeleted: false,
-        discountpercentage:{$lte:10},
+        discountpercentage:{$lte:pricing.discountminium},
         remainingUses: { $gt: 0 },
         $or: [
           { merchantCity: city },
@@ -591,6 +591,34 @@ class DiscountController {
     }
   }
 
+
+  static async DiscountById(req:AuthenticatedRequest,res:Response):Promise<any>{
+    try {
+      const {discountId}=req.params;
+
+      const discountData = await DiscountModel.findOne(
+        {_id:discountId,isDeleted:false}
+      )
+
+      if(!discountData){
+        return res.status(400).json({
+          data:{},
+          success:false,
+          message:['no data found']
+        })
+      }
+
+      return res.status(200).json({
+        data:discountData,
+        success:true,
+        message:['Discount data found successfully.']
+      })
+
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, message: ['Unable to load discount, please try again later.'] });
+    }
+  }
 
 }
 
