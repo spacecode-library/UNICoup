@@ -12,4 +12,7 @@ router.post("/submit-basic-info", MerchantMW, MerchantController.submitBasicInfo
 router.post("/upload-certificate", MerchantMW, uploadmerchantdocs.single('file'), MerchantController.uploadBusinessCertificate); // Upload business certificate
 router.post("/upload-logo", MerchantMW, uploadmerchantdocs.single('file'), MerchantController.uploadBusinessLogo); // Upload business logo
 
+router.get("/merchant/:status",MerchantMW,MerchantController.merchantStatus);
+router.post("/merchant/enter-redemption-code",MerchantMW,MerchantController.enterRedemptionCode);
+
 export default router;

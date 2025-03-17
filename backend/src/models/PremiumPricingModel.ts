@@ -8,7 +8,7 @@ export interface IPremiumPricing extends Document {
 const PremiumPricingSchema: Schema = new Schema(
   {
     _id: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
-    discountminium: { type: Number, required: true, min: 20 },
+    discountminium: { type: Number, required: true, min: 10 },
   },
   { timestamps: true }
 );

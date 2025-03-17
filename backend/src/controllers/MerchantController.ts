@@ -172,7 +172,7 @@ class MerchantController {
     }
 
 
-    static async enterRedemptionCode(req, res) {
+    static async enterRedemptionCode(req:AuthenticatedRequest, res:Response):Promise<any> {
         try {
           const { redemptionCode } = req.body;
           const merchantId = req.identityId; // from the authenticated request
@@ -258,6 +258,36 @@ class MerchantController {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ success: false, message: ['Failed to upload business logo'] });
+        }
+    }
+
+
+    static async merchantStatus(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+            const merchantId = req.identityId;
+
+            const {status} = req.params;
+
+            const merchantData = await MerchantModel.findOne(
+                {userid:merchantId,isdeleted:false},
+                {_id:1,status:1}
+            )
+
+            if(!merchantData){
+                return res.status(404).json({ success: false, message: ['Merchant not found'] });
+            }
+
+            return res.status(200).json(
+                {
+                    success: true,
+                    data:merchantData,
+                    message: ['Merchant data found successfully'],
+                }
+            )
+            
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ success: false, message: ['Unable to found data,Please try again later'] });
         }
     }
 }

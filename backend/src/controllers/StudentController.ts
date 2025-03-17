@@ -12,6 +12,7 @@ import cloudinary from 'cloudinary';
 import multer from 'multer';
 import { StudentStatusEnums } from '../constants/EnumTypes.js';
 import { sendEmailVerificationOTP } from '../utils/SendEmailVerification.js';
+import RedemptionModel from '../models/RedemptionModel.js';
 
 // Extend the Request type to include the `file` property and user data
 interface AuthenticatedRequest extends Request {
@@ -97,7 +98,7 @@ class StudentController {
 
         } catch (error) {
             console.error(error);
-            res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
+            return res.status(500).json({ success: false, message: ["Unable to Login, please try again later"] });
         }
     }
 
@@ -224,7 +225,7 @@ class StudentController {
             res.status(200).json({ success:true , message: ['Verification otp sent successfully'], data: { requestId: otpData._id } });
         } catch (error) {
             console.error('Error initiating verification:', error);
-            res.status(500).json({ message: 'Unable to send Verification otp , Please try again later' });
+            return res.status(500).json({ message: 'Unable to send Verification otp , Please try again later' });
         }
     }
 
@@ -276,7 +277,7 @@ class StudentController {
             res.status(200).json({ success:true , message: ['OTP verified successfully'] });
         } catch (error) {
             console.error('Error verifying OTP:', error);
-            res.status(500).json({success:false, message: ['Unable to verify Otp,Please try again later'] });
+            return res.status(500).json({success:false, message: ['Unable to verify Otp,Please try again later'] });
         }
     }
 
@@ -337,7 +338,7 @@ class StudentController {
             });
         } catch (error) {
             console.error('Error resending OTP:', error);
-            res.status(500).json({ success:false , message: ['Unable to send otp , please try again later'] });
+            return res.status(500).json({ success:false , message: ['Unable to send otp , please try again later'] });
         }
     }
 
@@ -397,7 +398,7 @@ class StudentController {
             res.status(200).json({success:true,  message: ['Student ID uploaded successfully.'] });
         } catch (error) {
             console.error('Error uploading Student ID:', error);
-            res.status(500).json({ success:false , message: ['Failed to upload Student ID'] });
+            return res.status(500).json({ success:false , message: ['Failed to upload Student ID'] });
         }
     }
 
@@ -439,7 +440,7 @@ class StudentController {
             });
         } catch (error) {
             console.error('Error in sending otp for graduation',error);
-            res.status(500).json({success:false,message:['Failed to send otp for graduation']});
+            return res.status(500).json({success:false,message:['Failed to send otp for graduation']});
         }
 
     }
@@ -499,9 +500,74 @@ class StudentController {
             });            
         } catch (error) {
             console.error('Error in verifying graduation:', error);
-            res.status(500).json({ success:false , message: ['Failed to verify graduation status'] });
+            return res.status(500).json({ success:false , message: ['Failed to verify graduation status'] });
         }
     }
+
+    // get student redemption history by student id
+
+    static async studentRedemptionHistory(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+
+            const {identityId} = req;
+
+            const studentData = await StudentModel.findOne(
+                {userid:identityId,isdeleted:false},
+                {_id:1}
+            )
+
+            const redemptionHistory = await RedemptionModel.find(
+                {studentId:studentData._id}
+            )
+
+            if(!redemptionHistory){
+                return res.status(400).json({
+                    success:false,data:{},message:['No data found']
+                })
+            }
+            return res.status(200).json({
+                success:true,
+                message:['Redemption history found'],
+                data:redemptionHistory
+            })
+            
+        } catch (error) {
+            console.error('Error in student redemption:', error);
+            return res.status(500).json({ success:false , message: ['Error in student redemption history'] });
+        }
+    }
+
+    static async redemptionDetail(req:AuthenticatedRequest,res:Response):Promise<any>{
+        try {
+            const {identityId} = req;
+            const {redemptionId} = req.params;
+
+            const redemptionData = await RedemptionModel.findOne(
+                {_id:redemptionId}
+            )
+
+            if(!redemptionData){
+                return res.status(400).json({
+                    success:false,message:['no data found'],data:{}
+                })
+            }
+
+            return res.status(200).json({
+                success:true,
+                message:['redemption data found successfully'],
+                data:redemptionData
+            })
+
+        } catch (error) {
+            console.error('Error in redemption detail:', error);
+            return res.status(500).json({ success:false , message: ['Error in redemption detail'] });
+        }
+    }
+
+    
+
+
+    
 
 }
 

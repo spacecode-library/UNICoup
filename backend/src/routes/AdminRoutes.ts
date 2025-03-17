@@ -21,4 +21,10 @@ router.post("/create-tag",AdminMW,AdminController.createTag);
 router.get("/tags",AdminMW,AdminController.getAllTags);
 router.put("/tag/:id",AdminMW,AdminController.deleteTag);
 
+
+router.get("/registered-student",AdminMW,AdminController.studentData);
+router.get("/registered-merchant",AdminMW,AdminController.merchantData);
+router.get("/merchant/:status",AdminMW,AdminController.merchantDataByStatus);
+
+
 export default router;
