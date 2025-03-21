@@ -38,3 +38,9 @@ export enum DiscountStatusEnums{
     Disabled = 'DISABLED',
     Created = 'CREATED'
 }
+
+export enum EventStatusEnums{
+    Upcoming = 'UPCOMING',
+    Live = 'LIVE',
+    Completed = 'COMPLETED'
+}

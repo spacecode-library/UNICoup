@@ -138,7 +138,7 @@ class DiscountController {
       }
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: ['Unable to create discount'] });
+      return res.status(500).json({ success: false, message: ['Unable to create discount'] });
     }
   }
 
@@ -175,10 +175,10 @@ class DiscountController {
         return res.status(404).json({ success: false, message: ['Discount not found'] });
       }
 
-      res.status(200).json({ success: true, message: ['Background image uploaded successfully'] });
+      return res.status(200).json({ success: true, message: ['Background image uploaded successfully'] });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: ['Unable to upload background image'] });
+      return res.status(500).json({ success: false, message: ['Unable to upload background image'] });
     }
   }
 
@@ -218,7 +218,7 @@ class DiscountController {
       })
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: ['Unable to Approved Discount, Please try again.'] });
+      return res.status(500).json({ success: false, message: ['Unable to Approved Discount, Please try again.'] });
     }
   }
 
@@ -256,7 +256,7 @@ class DiscountController {
       })
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: ['Unable to Reject Discount, Please try again.'] });
+      return res.status(500).json({ success: false, message: ['Unable to Reject Discount, Please try again.'] });
     }
   }
 
@@ -296,7 +296,7 @@ class DiscountController {
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ success: false, message: ['Unable to Delete Discount, Please try again later.'] });
+      return res.status(500).json({ success: false, message: ['Unable to Delete Discount, Please try again later.'] });
     }
   }
 
@@ -363,7 +363,7 @@ class DiscountController {
        });
     } catch (error) {
       console.error(error);
-      res.status(500).json({success:false,message:['Unable to load all discount , Please try again later.']})
+      return res.status(500).json({success:false,message:['Unable to load all discount , Please try again later.']})
     }
   }
 
@@ -424,7 +424,7 @@ class DiscountController {
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({success:false,message:['Unable to load all discount , Please try again later.']})
+      return res.status(500).json({success:false,message:['Unable to load all discount , Please try again later.']})
     }
   }
 
