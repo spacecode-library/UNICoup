@@ -269,8 +269,8 @@ class StudentController {
 
             // Update the student's verification status in the StudentModel
             const student = await StudentModel.findOneAndUpdate(
-                { email: getOtpData.email },
-                { $set: { userid: identityId, isVerified: true} },
+                { userid: identityId },
+                { $set: { userid: identityId, isVerified: true, email: getOtpData.email} },
                 { upsert: true, new: true }
             );
 
