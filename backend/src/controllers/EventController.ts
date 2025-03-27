@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { DateTime } from 'luxon';
-import { z } from 'zod';
+import { DateTime } from 'luxon'; // For time zone validation
 import EventModel, { EventTypeEnums } from '../models/EventModel.js';
 import StudentModel from '../models/StudentModel.js';
 import RegisteredEventModel from '../models/RegisteredEventModel.js';
@@ -13,79 +12,78 @@ interface AuthenticatedRequest extends Request {
   adminRole: string;
 }
 
-// Validation schemas using Zod
-const createEventSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
-  venue: z.string().min(1, 'Venue is required'),
-  startTime: z.number().int().positive('startTime must be a positive integer'),
-  endTime: z.number().int().positive('endTime must be a positive integer'),
-  timeZone: z.string().refine(
-    (value) => DateTime.local().setZone(value).isValid,
-    (value) => ({ message: `Invalid time zone: ${value}` })
-  ),
-  eventScope: z.enum(['PUBLIC', 'UNIVERSITY'], {
-    message: 'eventScope must be either PUBLIC or UNIVERSITY',
-  }),
-  eventType: z.enum([EventTypeEnums.IN_PERSON, EventTypeEnums.ONLINE, EventTypeEnums.HYBRID], {
-    message: 'eventType must be either IN_PERSON, ONLINE, or HYBRID',
-  }),
-  termsCondition: z.string().min(1, 'Terms and conditions are required'),
-  backgroundImage: z.string().url('Background image must be a valid URL'),
-});
-
-const getEventDataSchema = z.object({
-  eventScope: z.enum(['PUBLIC', 'UNIVERSITY'], {
-    message: 'eventScope must be either PUBLIC or UNIVERSITY',
-  }),
-});
-
-const registerEventSchema = z.object({
-  eventId: z.string().min(1, 'eventId is required'),
-});
-
-const editEventSchema = z.object({
-  title: z.string().min(1, 'Title is required').optional(),
-  description: z.string().min(1, 'Description is required').optional(),
-  venue: z.string().min(1, 'Venue is required').optional(),
-  startTime: z.number().int().positive('startTime must be a positive integer').optional(),
-  endTime: z.number().int().positive('endTime must be a positive integer').optional(),
-  timeZone: z
-    .string()
-    .refine(
-      (value) => DateTime.local().setZone(value).isValid,
-      (value) => ({ message: `Invalid time zone: ${value}` })
-    )
-    .optional(),
-  eventScope: z
-    .enum(['PUBLIC', 'UNIVERSITY'], {
-      message: 'eventScope must be either PUBLIC or UNIVERSITY',
-    })
-    .optional(),
-  eventType: z
-    .enum([EventTypeEnums.IN_PERSON, EventTypeEnums.ONLINE, EventTypeEnums.HYBRID], {
-      message: 'eventType must be either IN_PERSON, ONLINE, or HYBRID',
-    })
-    .optional(),
-  termsCondition: z.string().min(1, 'Terms and conditions are required').optional(),
-  backgroundImage: z.string().url('Background image must be a valid URL').optional(),
-});
-
 class EventController {
   static async createEvent(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { identityId } = req;
+      const {
+        title,
+        description,
+        venue,
+        startTime,
+        endTime,
+        eventScope,
+        timeZone,
+        eventType,
+        onlineLink,
+        termsCondition,
+        backgroundImage,
+      } = req.body;
 
-      // Validate request body
-      const validatedData = createEventSchema.parse(req.body);
-
-      const { title, description, venue, startTime, endTime, timeZone, eventScope, eventType, termsCondition, backgroundImage } = validatedData;
-
-      // Validate startTime < endTime
-      if (startTime >= endTime) {
+      // Validate required fields
+      if (!title || !startTime || !endTime || !eventScope || !timeZone || !eventType) {
         return res.status(400).json({
           success: false,
-          message: ['startTime must be before endTime'],
+          message: ['Title, startTime, endTime, eventScope, timeZone, and eventType are required'],
+        });
+      }
+
+      // Validate startTime and endTime
+      if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) {
+        return res.status(400).json({
+          success: false,
+          message: ['Invalid start or end time'],
+        });
+      }
+
+      // Validate eventScope
+      if (!['PUBLIC', 'UNIVERSITY'].includes(eventScope)) {
+        return res.status(400).json({
+          success: false,
+          message: ['eventScope must be either PUBLIC or UNIVERSITY'],
+        });
+      }
+
+      // Validate timeZone using luxon
+      const validTimeZone = DateTime.local().setZone(timeZone).isValid;
+      if (!validTimeZone) {
+        return res.status(400).json({
+          success: false,
+          message: ['Invalid timeZone. Must be a valid IANA time zone (e.g., America/Los_Angeles)'],
+        });
+      }
+
+      // Validate eventType
+      if (!Object.values(EventTypeEnums).includes(eventType)) {
+        return res.status(400).json({
+          success: false,
+          message: ['eventType must be either IN_PERSON, ONLINE, or HYBRID'],
+        });
+      }
+
+      // Validate onlineLink for ONLINE or HYBRID events
+      if ((eventType === EventTypeEnums.ONLINE || eventType === EventTypeEnums.HYBRID) && !onlineLink) {
+        return res.status(400).json({
+          success: false,
+          message: ['onlineLink is required for ONLINE or HYBRID events'],
+        });
+      }
+
+      // Ensure onlineLink is not provided for IN_PERSON events
+      if (eventType === EventTypeEnums.IN_PERSON && onlineLink) {
+        return res.status(400).json({
+          success: false,
+          message: ['onlineLink should not be provided for IN_PERSON events'],
         });
       }
 
@@ -94,11 +92,12 @@ class EventController {
         title,
         description,
         venue,
-        startTime, // Already in UTC (converted by frontend)
-        endTime, // Already in UTC (converted by frontend)
-        timeZone, // Store the event's anchor time zone
+        startTime,
+        endTime,
         eventScope,
+        timeZone,
         eventType,
+        onlineLink,
         termsCondition,
         backgroundImage,
         isDeleted: false,
@@ -112,12 +111,6 @@ class EventController {
         data: newEvent,
       });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: error.errors.map((e) => e.message),
-        });
-      }
       console.error(error);
       return res.status(500).json({ success: false, message: ['Unable to create event'] });
     }
@@ -126,10 +119,15 @@ class EventController {
   static async getEventData(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { identityId } = req;
+      const { eventScope } = req.body;
 
-      // Validate request body
-      const validatedData = getEventDataSchema.parse(req.body);
-      const { eventScope } = validatedData;
+      // Validate eventScope
+      if (!eventScope || !['PUBLIC', 'UNIVERSITY'].includes(eventScope)) {
+        return res.status(400).json({
+          success: false,
+          message: ['eventScope must be either PUBLIC or UNIVERSITY'],
+        });
+      }
 
       // Define the query
       const query: any = { eventScope, isDeleted: false };
@@ -155,12 +153,6 @@ class EventController {
         data: events,
       });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: error.errors.map((e) => e.message),
-        });
-      }
       console.error(error);
       return res.status(500).json({ success: false, message: ['Unable to fetch event'] });
     }
@@ -169,10 +161,15 @@ class EventController {
   static async registeredEvent(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { identityId } = req;
+      const { eventId } = req.body;
 
-      // Validate request body
-      const validatedData = registerEventSchema.parse(req.body);
-      const { eventId } = validatedData;
+      // Validate eventId
+      if (!eventId) {
+        return res.status(400).json({
+          success: false,
+          message: ['eventId is required'],
+        });
+      }
 
       // Check if the event exists
       const event = await EventModel.findOne({ _id: eventId, isDeleted: false });
@@ -226,12 +223,6 @@ class EventController {
         data: registeredStudent,
       });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: error.errors.map((e) => e.message),
-        });
-      }
       console.error(error);
       return res.status(500).json({ success: false, message: ['Unable to register for event'] });
     }
@@ -240,7 +231,7 @@ class EventController {
   static async getRegisteredStudents(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { identityId } = req;
-      const { id: eventId } = req.query as { id: string };
+      const { id: eventId } = req.query;
 
       if (!eventId) {
         return res.status(400).json({
@@ -331,9 +322,19 @@ class EventController {
     try {
       const { identityId } = req;
       const { id } = req.params;
-
-      // Validate request body
-      const validatedData = editEventSchema.parse(req.body);
+      const {
+        title,
+        description,
+        startTime,
+        endTime,
+        eventScope,
+        timeZone,
+        eventType,
+        onlineLink,
+        backgroundImage,
+        termsCondition,
+        venue,
+      } = req.body;
 
       const eventData = await EventModel.findOne({
         _id: id,
@@ -351,26 +352,82 @@ class EventController {
 
       const updateData: any = {};
 
-      if (validatedData.title !== undefined) updateData.title = validatedData.title;
-      if (validatedData.description !== undefined) updateData.description = validatedData.description;
-      if (validatedData.venue !== undefined) updateData.venue = validatedData.venue;
-      if (validatedData.startTime !== undefined) updateData.startTime = validatedData.startTime;
-      if (validatedData.endTime !== undefined) updateData.endTime = validatedData.endTime;
-      if (validatedData.timeZone !== undefined) updateData.timeZone = validatedData.timeZone;
-      if (validatedData.eventScope !== undefined) updateData.eventScope = validatedData.eventScope;
-      if (validatedData.eventType !== undefined) updateData.eventType = validatedData.eventType;
-      if (validatedData.termsCondition !== undefined) updateData.termsCondition = validatedData.termsCondition;
-      if (validatedData.backgroundImage !== undefined) updateData.backgroundImage = validatedData.backgroundImage;
-
-      // Validate startTime < endTime if both are provided
-      if (updateData.startTime !== undefined && updateData.endTime !== undefined) {
-        if (updateData.startTime >= updateData.endTime) {
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (startTime !== undefined) {
+        if (isNaN(startTime)) {
           return res.status(400).json({
             success: false,
-            message: ['startTime must be before endTime'],
+            message: ['Invalid startTime'],
           });
         }
+        updateData.startTime = startTime;
       }
+      if (endTime !== undefined) {
+        if (isNaN(endTime)) {
+          return res.status(400).json({
+            success: false,
+            message: ['Invalid endTime'],
+          });
+        }
+        updateData.endTime = endTime;
+      }
+      if (startTime !== undefined && endTime !== undefined && startTime >= endTime) {
+        return res.status(400).json({
+          success: false,
+          message: ['startTime must be before endTime'],
+        });
+      }
+      if (eventScope !== undefined) {
+        if (!['PUBLIC', 'UNIVERSITY'].includes(eventScope)) {
+          return res.status(400).json({
+            success: false,
+            message: ['eventScope must be either PUBLIC or UNIVERSITY'],
+          });
+        }
+        updateData.eventScope = eventScope;
+      }
+      if (timeZone !== undefined) {
+        const validTimeZone = DateTime.local().setZone(timeZone).isValid;
+        if (!validTimeZone) {
+          return res.status(400).json({
+            success: false,
+            message: ['Invalid timeZone. Must be a valid IANA time zone (e.g., America/Los_Angeles)'],
+          });
+        }
+        updateData.timeZone = timeZone;
+      }
+      if (eventType !== undefined) {
+        if (!Object.values(EventTypeEnums).includes(eventType)) {
+          return res.status(400).json({
+            success: false,
+            message: ['eventType must be either IN_PERSON, ONLINE, or HYBRID'],
+          });
+        }
+        updateData.eventType = eventType;
+      }
+      if (onlineLink !== undefined) {
+        updateData.onlineLink = onlineLink;
+      }
+      // Validate onlineLink based on eventType
+      if (
+        (eventType === EventTypeEnums.ONLINE || eventType === EventTypeEnums.HYBRID) &&
+        (onlineLink === undefined || onlineLink === '')
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: ['onlineLink is required for ONLINE or HYBRID events'],
+        });
+      }
+      if (eventType === EventTypeEnums.IN_PERSON && onlineLink) {
+        return res.status(400).json({
+          success: false,
+          message: ['onlineLink should not be provided for IN_PERSON events'],
+        });
+      }
+      if (backgroundImage !== undefined) updateData.backgroundImage = backgroundImage;
+      if (termsCondition !== undefined) updateData.termsCondition = termsCondition;
+      if (venue !== undefined) updateData.venue = venue;
 
       const updatedEvent = await EventModel.findByIdAndUpdate(
         id,
@@ -384,12 +441,6 @@ class EventController {
         data: updatedEvent,
       });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: error.errors.map((e) => e.message),
-        });
-      }
       console.error(error);
       return res.status(500).json({ success: false, message: ['Unable to edit event'] });
     }
