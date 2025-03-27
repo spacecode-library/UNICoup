@@ -56,32 +56,39 @@ class EventController {
         }
     }
 
-    static async getEventData(req:AuthenticatedRequest,res:Response):Promise<any>{
-        try {
-            const {identityId} = req;
-            const {status,eventScope} = req.body;
-            const eventData = await EventModel.find(
-                {userId:identityId,status:status,eventScope:eventScope,isDeleted:false}
-            )
+static async getEventData(req: AuthenticatedRequest, res: Response): Promise<any> {
+  try {
+    const { identityId } = req;
+    const { status, eventScope } = req.body;
 
-            if(eventData.length ==0){
-                return res.status(403).json({
-                    success: false,
-                    message: ['No data found'],
-                    data: {},
-                })
-            }
+    // Define the query
+    const query: any = { status, eventScope, isDeleted: false };
 
-            return res.status(200).json({
-                success:true,
-                message:['Event Data fetch successfully'],
-                data:eventData
-            })
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ success: false, message: ['Unable to fetch event'] });
-        }
+    // Only filter by userId if eventScope is not PUBLIC
+    if (eventScope !== 'PUBLIC') {
+      query.userId = identityId;
     }
+
+    const eventData = await EventModel.find(query);
+
+    if (eventData.length == 0) {
+      return res.status(403).json({
+        success: false,
+        message: ['No data found'],
+        data: {},
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: ['Event Data fetch successfully'],
+      data: eventData,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: ['Unable to fetch event'] });
+  }
+}
 
     static async registeredEvent (req:AuthenticatedRequest,res:Response):Promise<any>{
         try {
