@@ -59,19 +59,51 @@ class EventController {
 static async getEventData(req: AuthenticatedRequest, res: Response): Promise<any> {
   try {
     const { identityId } = req;
-    const { status, eventScope } = req.body;
+    const { status: requestedStatus, eventScope } = req.body;
 
-    // Define the query
-    const query: any = { status, eventScope, isDeleted: false };
+    // Define the base query
+    const query: any = { eventScope, isDeleted: false };
 
     // Only filter by userId if eventScope is not PUBLIC
     if (eventScope !== 'PUBLIC') {
       query.userId = identityId;
     }
 
-    const eventData = await EventModel.find(query);
+    // Fetch all events matching the eventScope (and userId for non-PUBLIC events)
+    const events = await EventModel.find(query);
 
-    if (eventData.length == 0) {
+    if (events.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: ['No data found'],
+        data: {},
+      });
+    }
+
+    // Compute the current time (in seconds, to match startTime/endTime format)
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    // Filter events based on the requested status
+    const filteredEvents = events.filter((event) => {
+      // Compute the event's actual status based on current time
+      let actualStatus: 'UPCOMING' | 'LIVE' | 'COMPLETED';
+      if (currentTime < event.startTime) {
+        actualStatus = 'UPCOMING';
+      } else if (currentTime >= event.startTime && currentTime < event.endTime) {
+        actualStatus = 'LIVE';
+      } else {
+        actualStatus = 'COMPLETED';
+      }
+
+      // Update the event's status in the database (optional, for consistency)
+      event.status = actualStatus;
+      event.save();
+
+      // Return true if the event matches the requested status
+      return actualStatus === requestedStatus;
+    });
+
+    if (filteredEvents.length === 0) {
       return res.status(403).json({
         success: false,
         message: ['No data found'],
@@ -82,7 +114,7 @@ static async getEventData(req: AuthenticatedRequest, res: Response): Promise<any
     return res.status(200).json({
       success: true,
       message: ['Event Data fetch successfully'],
-      data: eventData,
+      data: filteredEvents,
     });
   } catch (error) {
     console.error(error);
