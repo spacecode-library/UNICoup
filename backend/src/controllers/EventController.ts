@@ -150,10 +150,10 @@ class EventController {
   static async getEventData(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { identityId } = req;
-      const { eventScope } = req.body;
+      const { eventScope } = req.query; // Changed to query parameter
 
       // Validate eventScope
-      if (!eventScope || !['PUBLIC', 'UNIVERSITY'].includes(eventScope)) {
+      if (!eventScope || !['PUBLIC', 'UNIVERSITY'].includes(eventScope as string)) {
         return res.status(400).json({
           success: false,
           message: ['eventScope must be either PUBLIC or UNIVERSITY'],
