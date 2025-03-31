@@ -201,7 +201,7 @@ class AdminController {
             );
             console.log(pendingStudents)
             if (pendingStudents.length === 0) {
-                return res.status(404).json({
+                return res.status(200).json({
                     success: true,
                     message: ['No Data Found.'],
                     data: {}
@@ -237,7 +237,7 @@ class AdminController {
             );
 
             if (!student) {
-                return res.status(404).json({ success: false, message: ['Student not found'] });
+                return res.status(403).json({ success: false, message: ['Student not found'] });
             }
 
             return res.status(200).json({
@@ -408,7 +408,7 @@ class AdminController {
             const studentData = await StudentModel.find({ isDeleted: false });
 
             if(studentData.length == 0){
-                return res.status(403).json({ success: true, message: "No Data found", data: {} });
+                return res.status(200).json({ success: true, message: "No Data found", data: {} });
             }
 
             return res.status(200).json(
@@ -431,7 +431,7 @@ class AdminController {
             const merchantData = await MerchantModel.find({ isDeleted: false });
 
             if(merchantData.length == 0){
-                return res.status(403).json({ success: true, message: "No Data found", data: {} });
+                return res.status(200).json({ success: true, message: "No Data found", data: {} });
             }
 
             return res.status(200).json(
@@ -458,7 +458,7 @@ class AdminController {
             )
 
             if(merchantData.length == 0){
-                return res.status(403).json({ success: true, message: "No Data found", data: {} });
+                return res.status(200).json({ success: true, message: "No Data found", data: {} });
             }
 
             return  res.status(200).json(
