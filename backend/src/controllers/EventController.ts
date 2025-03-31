@@ -87,6 +87,35 @@ class EventController {
         });
       }
 
+      // Fetch student data to get university details
+      const studentData = await StudentModel.findOne(
+        { userId: identityId, isDeleted: false },
+        { university: 1, universityDomain: 1 }
+      );
+
+      if (!studentData) {
+        return res.status(403).json({
+          success: false,
+          message: ['Student not found'],
+          data: {},
+        });
+      }
+
+      // If eventScope is UNIVERSITY, universityName and universityDomain are required
+      let universityName = undefined;
+      let universityDomain = undefined;
+
+      if (eventScope === 'UNIVERSITY') {
+        if (!studentData.university || !studentData.universityDomain) {
+          return res.status(400).json({
+            success: false,
+            message: ['Student must have a university and universityDomain to create a UNIVERSITY event'],
+          });
+        }
+        universityName = studentData.university;
+        universityDomain = studentData.universityDomain;
+      }
+
       const newEvent = new EventModel({
         userId: identityId,
         title,
@@ -100,6 +129,8 @@ class EventController {
         onlineLink,
         termsCondition,
         backgroundImage,
+        universityName, // Save universityName if eventScope is UNIVERSITY
+        universityDomain, // Save universityDomain if eventScope is UNIVERSITY
         isDeleted: false,
       });
 
@@ -119,18 +150,44 @@ class EventController {
   static async getEventData(req: AuthenticatedRequest, res: Response): Promise<any> {
     try {
       const { identityId } = req;
-      const { eventScope } = req.body;
+      const { eventScope } = req.query; // Changed to query parameter
 
       // Validate eventScope
-      if (!eventScope || !['PUBLIC', 'UNIVERSITY'].includes(eventScope)) {
+      if (!eventScope || !['PUBLIC', 'UNIVERSITY'].includes(eventScope as string)) {
         return res.status(400).json({
           success: false,
           message: ['eventScope must be either PUBLIC or UNIVERSITY'],
         });
       }
 
+      // Fetch student data to get their university domain
+      const studentData = await StudentModel.findOne(
+        { userId: identityId, isDeleted: false },
+        { universityDomain: 1 }
+      );
+
+      if (!studentData) {
+        return res.status(403).json({
+          success: false,
+          message: ['Student not found'],
+          data: {},
+        });
+      }
+
       // Define the query
       const query: any = { eventScope, isDeleted: false };
+
+      // For UNIVERSITY events, filter by universityDomain
+      if (eventScope === 'UNIVERSITY') {
+        if (!studentData.universityDomain) {
+          return res.status(403).json({
+            success: false,
+            message: ['Student must have a universityDomain to view UNIVERSITY events'],
+            data: {},
+          });
+        }
+        query.universityDomain = studentData.universityDomain;
+      }
 
       // Only filter by userId if eventScope is not PUBLIC
       if (eventScope !== 'PUBLIC') {
@@ -386,6 +443,28 @@ class EventController {
           });
         }
         updateData.eventScope = eventScope;
+
+        // If changing to UNIVERSITY, fetch and update university details
+        if (eventScope === 'UNIVERSITY') {
+          const studentData = await StudentModel.findOne(
+            { userId: identityId, isDeleted: false },
+            { university: 1, universityDomain: 1 }
+          );
+
+          if (!studentData || !studentData.university || !studentData.universityDomain) {
+            return res.status(400).json({
+              success: false,
+              message: ['Student must have a university and universityDomain to update event to UNIVERSITY scope'],
+            });
+          }
+
+          updateData.universityName = studentData.university;
+          updateData.universityDomain = studentData.universityDomain;
+        } else {
+          // If changing to PUBLIC, clear university details
+          updateData.universityName = null;
+          updateData.universityDomain = null;
+        }
       }
       if (timeZone !== undefined) {
         const validTimeZone = DateTime.local().setZone(timeZone).isValid;

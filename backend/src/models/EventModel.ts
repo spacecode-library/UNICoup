@@ -23,6 +23,8 @@ export interface IEvent extends Document {
   timeZone: string; // IANA time zone (e.g., "America/Los_Angeles")
   eventType: string; // IN_PERSON, ONLINE, or HYBRID
   onlineLink?: string; // Optional link for ONLINE or HYBRID events
+  universityName?: string; // University name (required for UNIVERSITY events)
+  universityDomain?: string; // University domain (required for UNIVERSITY events)
   isDeleted: boolean;
 }
 
@@ -41,6 +43,8 @@ const EventSchema: Schema = new Schema({
   timeZone: { type: String, required: true }, // New field for the event's reference time zone
   eventType: { type: String, required: true, enum: Object.values(EventTypeEnums) }, // New field for event type
   onlineLink: { type: String, required: false }, // Optional field for online/hybrid events
+  universityName: { type: String, required: false }, // University name (required for UNIVERSITY events)
+  universityDomain: { type: String, required: false }, // University domain (required for UNIVERSITY events)
   isDeleted: { type: Boolean, default: false },
 });
 
