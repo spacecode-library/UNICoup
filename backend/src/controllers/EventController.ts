@@ -162,7 +162,7 @@ class EventController {
 
       // Fetch student data to get their university domain
       const studentData = await StudentModel.findOne(
-        { userId: identityId, isDeleted: false },
+        { userid: identityId, isdeleted: false },
         { universityDomain: 1 }
       );
 
