@@ -89,7 +89,7 @@ class EventController {
 
       // Fetch student data to get university details
       const studentData = await StudentModel.findOne(
-        { userId: identityId, isDeleted: false },
+        { userid: identityId, isdeleted: false },
         { university: 1, universityDomain: 1 }
       );
 
@@ -240,7 +240,7 @@ class EventController {
 
       // Check if the student exists
       const studentData = await StudentModel.findOne(
-        { userId: identityId, isDeleted: false },
+        { userid: identityId, isdeleted: false },
         { _id: 1, userId: 1 }
       );
 
@@ -447,7 +447,7 @@ class EventController {
         // If changing to UNIVERSITY, fetch and update university details
         if (eventScope === 'UNIVERSITY') {
           const studentData = await StudentModel.findOne(
-            { userId: identityId, isDeleted: false },
+            { userid: identityId, isdeleted: false },
             { university: 1, universityDomain: 1 }
           );
 
