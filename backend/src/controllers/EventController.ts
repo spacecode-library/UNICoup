@@ -191,7 +191,7 @@ class EventController {
 
       // Only filter by userId if eventScope is not PUBLIC
       if (eventScope !== 'PUBLIC') {
-        query.userid = identityId;
+        query.userId = identityId;
       }
 
       const events = await EventModel.find(query);
