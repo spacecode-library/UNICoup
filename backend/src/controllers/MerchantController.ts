@@ -266,8 +266,6 @@ class MerchantController {
         try {
             const merchantId = req.identityId;
 
-            const {status} = req.params;
-
             const merchantData = await MerchantModel.findOne(
                 {userid:merchantId,isdeleted:false},
                 {_id:1,status:1}
