@@ -268,7 +268,7 @@ class MerchantController {
 
             const merchantData = await MerchantModel.findOne(
                 {userid:merchantId,isdeleted:false},
-                {_id:1,status:1}
+                {_id:1,status:1,isVerifed:1,isCompletedRegistration:1}
             )
 
             if(!merchantData){
