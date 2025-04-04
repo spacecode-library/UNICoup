@@ -27,7 +27,9 @@ router.post(
 
 router.put("/approve",[AdminMW],DiscountController.ApprovedDiscount)
 
-router.get("/all/:merchantId",[MerchantMW, AdminMW],DiscountController.GetAllDiscountsMerchants)
+router.get("/all/:merchantId",[MerchantMW],DiscountController.GetAllDiscountsMerchants)
+
+router.get("/all/:merchantId",[AdminMW],DiscountController.GetAllDiscountsMerchants)
 
 router.get("/delete/:discountId",[MerchantMW, AdminMW],DiscountController.DeleteDiscount)
 
