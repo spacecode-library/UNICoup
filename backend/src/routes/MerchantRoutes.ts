@@ -15,4 +15,6 @@ router.post("/upload-logo", MerchantMW, uploadmerchantdocs.single('file'), Merch
 router.get("/status",MerchantMW,MerchantController.merchantStatus);
 router.post("/merchant/enter-redemption-code",MerchantMW,MerchantController.enterRedemptionCode);
 
+router.get("/metrices",MerchantMW,MerchantController.getDiscountStats);
+router.get("/top-discounts",MerchantMW,MerchantController.topDiscount);
 export default router;

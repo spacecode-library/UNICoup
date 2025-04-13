@@ -288,6 +288,188 @@ class MerchantController {
             return res.status(500).json({ success: false, message: ['Unable to found data,Please try again later'] });
         }
     }
+
+    static async getDiscountStats(req: AuthenticatedRequest, res: Response): Promise<any> {
+        try {
+            const merchantId = req.identityId;
+    
+            // 1. Retrieve discounts for the given merchant
+            const discountData = await DiscountModel.find(
+                { merchantId: merchantId, isDeleted: false },
+                { _id: 1, totalUses: 1, startprice: 1, discountpercentage: 1 }
+            );
+    
+            if (!discountData || discountData.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: ['Discount data not found']
+                });
+            }
+    
+            // Create an array of discount IDs for later queries
+            const discountIds = discountData.map(item => item._id);
+    
+            // Initialize variables for aggregations
+            let totalUses = 0;
+            let totalRevenue = 0;
+            let discountPercentageSum = 0;
+            let countDiscountPercentage = 0;
+            let startPriceSum = 0;
+            let countStartPrice = 0;
+    
+            discountData.forEach(item => {
+                const uses = item.totalUses || 0;
+                totalUses += uses;
+    
+                const price = item.startprice || 0;
+                totalRevenue += uses * price;
+    
+                if (item.discountpercentage !== undefined && item.discountpercentage !== null) {
+                    discountPercentageSum += item.discountpercentage;
+                    countDiscountPercentage++;
+                }
+    
+                if (item.startprice !== undefined && item.startprice !== null) {
+                    startPriceSum += item.startprice;
+                    countStartPrice++;
+                }
+            });
+    
+            // 2. Get redemption counts
+            // Total redemptions
+            const totalRedemption = await RedemptionModel.countDocuments({
+                discountId: { $in: discountIds },
+                isRedeemed: true
+            });
+    
+            // Redemptions in the last 30 days
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+            const lastThirtyDaysRedemption = await RedemptionModel.countDocuments({
+                discountId: { $in: discountIds },
+                isRedeemed: true,
+                redemptionDate: { $gte: thirtyDaysAgo }
+            });
+    
+            // 3. Calculate Conversion Rate (if total uses is not zero)
+            let conversionRate = 0;
+            if (totalUses > 0) {
+                conversionRate = Math.round((totalRedemption / totalUses) * 100);
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: ['Total uses is zero, cannot calculate conversion rate']
+                });
+            }
+    
+            // 4. Calculate Remaining Uses
+            const remainingUses = totalUses - totalRedemption;
+    
+            // 5. Calculate average discount percentage and average starting price
+            const averageDiscountPercentage =
+                countDiscountPercentage > 0
+                    ? parseFloat((discountPercentageSum / countDiscountPercentage).toFixed(2))
+                    : 0;
+            const averageStartingPrice =
+                countStartPrice > 0
+                    ? parseFloat((startPriceSum / countStartPrice).toFixed(2))
+                    : 0;
+    
+            // 6. Return the aggregated data
+            return res.status(200).json({
+                success: true,
+                data: {
+                    totalRedemption,
+                    lastThirtyDaysRedemption,
+                    conversionRate,
+                    totalRevenue,
+                    remainingUses,
+                    averageDiscountPercentage,
+                    averageStartingPrice
+                },
+                message: ['Discount statistics data found successfully.']
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: ['Unable to fetch data, please try again later.']
+            });
+        }
+    }
+
+    static async topDiscount(req: AuthenticatedRequest, res: Response): Promise<any> {
+        try {
+            const merchantId = req.identityId;
+    
+            const topDiscounts = await DiscountModel.aggregate([
+                { 
+                    $match: { 
+                        merchantId: merchantId, 
+                        isDeleted: false 
+                    } 
+                },
+                {
+                    $lookup: {
+                        from: "redemptions",
+                        let: { discountId: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $eq: ["$discountId", "$$discountId"] },
+                                            { $eq: ["$isRedeemed", true] }
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "redemptions"
+                    }
+                },
+                {
+                    $addFields: {
+                        redemptionCount: { $size: "$redemptions" }
+                    }
+                },
+                { $sort: { redemptionCount: -1 } },
+                { $limit: 3 },
+                {
+                    $project: {
+                        title: 1,
+                        description: 1,
+                        _id: 0
+                    }
+                }
+            ]);
+    
+            if (!topDiscounts || topDiscounts.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: ['No top discount data found']
+                });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                data: topDiscounts,
+                message: ['Top discount data fetched successfully']
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: ['Unable to fetch data, please try again later.']
+            });
+        }
+    }    
+    
+
+    
+
+
 }
 
 export default MerchantController;

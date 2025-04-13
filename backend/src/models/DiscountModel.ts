@@ -52,8 +52,8 @@ const DiscountSchema: Schema = new Schema(
     status: {
       type: String,
       enum: Object.values(DiscountStatusEnums),
-      default: DiscountStatusEnums.Created,
-    },
+      default: DiscountStatusEnums.Created, 
+    },  
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
     isApproved: { type: Boolean, default: false },
